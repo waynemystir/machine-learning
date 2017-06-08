@@ -75,14 +75,26 @@ int labels_header(char *filename, uint32_t *magic_number, uint32_t *num_labels) 
 	return 0;
 }
 
-int get_images(char *filename, uint32_t num_images, uint32_t num_rows, uint32_t num_cols, linked_list_t **pixels) {
-        char path[256] = {0};
-        sprintf(path, "%s/%s", FOLDER, filename);
-        FILE *f = fopen(path, "rb");
-        if (!f) {
-                printf("Could not open file (%s).\n", path);
-                return -1;
-        }
+int get_images(char *filename,
+	uint32_t num_images,
+	uint32_t num_rows,
+	uint32_t num_cols,
+	size_t num_validation_pixels,
+	linked_list_t **train_pixels,
+	linked_list_t **validation_pixels) {
+
+	if (num_validation_pixels > num_images) {
+		printf("Error: num_validation_pixels > num_images\n");
+		return -1;
+	}
+
+	char path[256] = {0};
+	sprintf(path, "%s/%s", FOLDER, filename);
+	FILE *f = fopen(path, "rb");
+	if (!f) {
+		printf("Could not open file (%s).\n", path);
+		return -1;
+	}
 
 	int fs = fseek(f, IMAGEOFFSET, SEEK_SET);
 	if (fs == -1) {
@@ -90,35 +102,59 @@ int get_images(char *filename, uint32_t num_images, uint32_t num_rows, uint32_t 
 		return -1;
 	}
 
-	linked_list_t *pxs = malloc(SZ_LL);
-	if (!pxs) return -1;
-	memset(pxs, '\0', SZ_LL);
-	if (pixels) *pixels = pxs;
+	linked_list_t *tr_pxs, *vd_pxs = NULL;
+	tr_pxs = malloc(SZ_LL);
+	if (!tr_pxs) return -1;
+	memset(tr_pxs, '\0', SZ_LL);
+	if (train_pixels) *train_pixels = tr_pxs;
+
+	if (num_validation_pixels > 0 && validation_pixels) {
+		vd_pxs = malloc(SZ_LL);
+		if (!vd_pxs) return -1;
+		memset(vd_pxs, '\0', SZ_LL);
+		*validation_pixels = vd_pxs;
+	}
+
+	size_t num_train_pixels = num_images - num_validation_pixels;
 	unsigned char pixel;
 
 	for (int i = 0; i < num_images; i++) {
-                matrix_t *m;
-                matrix_init(&m, num_rows * num_cols, 1, NULL);
-                for (int j = 0; j < num_rows * num_cols; j++) {
+		matrix_t *m;
+		matrix_init(&m, num_rows * num_cols, 1, NULL);
+		for (int j = 0; j < num_rows * num_cols; j++) {
 			fread(&pixel, sizeof(unsigned char), 1, f);
-                        double value = (double)(pixel) / 256;
-                        matrix_set(m, j, 0, value);
-                }
-		list_add_tail(pxs, m, NULL);
-        }
+			double value = (double)(pixel) / 256;
+			matrix_set(m, j, 0, value);
+		}
+		if (i < num_train_pixels)
+			list_add_tail(tr_pxs, m, NULL);
+		else if (vd_pxs)
+			list_add_tail(vd_pxs, m, NULL);
+		else free(m);
+	}
 
 	fclose(f);
 	return 0;
 }
 
-int get_labels(char *filename, uint32_t num_labels, linked_list_t **labels) {
-        char path[256] = {0};
-        sprintf(path, "%s/%s", FOLDER, filename);
-        FILE *f = fopen(path, "rb");
-        if (!f) {
-                printf("Could not open file (%s).\n", path);
-                return -1;
-        }
+int get_labels(char *filename,
+	uint32_t num_labels,
+	size_t num_validation_labels,
+	linked_list_t **train_labels,
+	linked_list_t **validation_labels) {
+
+	if (num_validation_labels > num_labels) {
+		printf("Error: num_validation_labels > num_labels\n");
+		return -1;
+	}
+
+	char path[256] = {0};
+	sprintf(path, "%s/%s", FOLDER, filename);
+	FILE *f = fopen(path, "rb");
+	if (!f) {
+		printf("Could not open file (%s).\n", path);
+		return -1;
+	}
 
 	int fs = fseek(f, LABELOFFSET, SEEK_SET);
 	if (fs == -1) {
@@ -126,10 +162,20 @@ int get_labels(char *filename, uint32_t num_labels, linked_list_t **labels) {
 		return -1;
 	}
 
-	linked_list_t *lbs = malloc(SZ_LL);
-	if (!lbs) return -1;
-	memset(lbs, '\0', SZ_LL);
-	if (labels) *labels = lbs;
+	linked_list_t *tr_lbs, *vd_lbs = NULL;
+	tr_lbs = malloc(SZ_LL);
+	if (!tr_lbs) return -1;
+	memset(tr_lbs, '\0', SZ_LL);
+	if (train_labels) *train_labels = tr_lbs;
+
+	if (num_validation_labels > 0 && validation_labels) {
+		vd_lbs = malloc(SZ_LL);
+		if (!vd_lbs) return -1;
+		memset(vd_lbs, '\0', SZ_LL);
+		*validation_labels = vd_lbs;
+	}
+
+	size_t num_train_labels = num_labels - num_validation_labels;
 	unsigned char label;
 
 	for (int i = 0; i < num_labels; i++) {
@@ -138,7 +184,12 @@ int get_labels(char *filename, uint32_t num_labels, linked_list_t **labels) {
 		fread(&label, sizeof(unsigned char), 1, f);
 		size_t lp = label;
 		matrix_set(m, lp, 0, 1);
-		list_add_tail(lbs, m, NULL);
+
+		if (i < num_train_labels)
+			list_add_tail(tr_lbs, m, NULL);
+		else if (vd_lbs)
+			list_add_tail(vd_lbs, m, NULL);
+		else free(m);
 	}
 
 	fclose(f);

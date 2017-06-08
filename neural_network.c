@@ -98,19 +98,29 @@ int main() {
 		return -1;
 	}
 
-	linked_list_t *train_pixels, *test_pixels, *train_labels, *test_labels;
-	get_images(TRAIN_IMAGES_FILENAME, num_train_images, num_rows, num_cols, &train_pixels);
-	get_images(TEST_IMAGES_FILENAME, num_test_images, num_rows, num_cols, &test_pixels);
-	printf("We got the images (%lu)(%lu)...\n", train_pixels->count, test_pixels->count);
-	get_labels(TRAIN_LABELS_FILENAME, num_train_labels, &train_labels);
-	get_labels(TEST_LABELS_FILENAME, num_test_labels, &test_labels);
+	size_t num_validation = 10 * 1000;
+	linked_list_t *train_pixels, *validation_pixels, *test_pixels, *train_labels, *validation_labels, *test_labels;
+	get_images(TRAIN_IMAGES_FILENAME, num_train_images, num_rows, num_cols, num_validation, &train_pixels, &validation_pixels);
+	get_images(TEST_IMAGES_FILENAME, num_test_images, num_rows, num_cols, 0, &test_pixels, NULL);
+	printf("We got the images (%lu)(%lu)(%lu)...\n", train_pixels->count, validation_pixels->count, test_pixels->count);
+	get_labels(TRAIN_LABELS_FILENAME, num_train_labels, num_validation, &train_labels, &validation_labels);
+	get_labels(TEST_LABELS_FILENAME, num_test_labels, 0, &test_labels, NULL);
+	printf("We got the labels (%lu)(%lu)(%lu)...\n", train_labels->count, validation_labels->count, test_labels->count);
 
 	size_t wes = 43432;
 	linked_list_node_t *n = list_get(train_pixels, wes);
-	printf("Lets print matrix (%lu)(%s)(%s)\n", wes, n ? "GOOD" : "BAD", n->data ? "GOOD" : "BAD");
+	printf("Lets print training matrix (%lu)(%s)(%s)\n", wes, n ? "GOOD" : "BAD", n->data ? "GOOD" : "BAD");
 	matrix_print(n->data, 8, 1);
 	n = list_get(train_labels, wes);
-	printf("Lets print label (%lu)(%s)(%s)\n", wes, n ? "GOOD" : "BAD", n->data ? "GOOD" : "BAD");
+	printf("Lets print training label (%lu)(%s)(%s)\n", wes, n ? "GOOD" : "BAD", n->data ? "GOOD" : "BAD");
+	matrix_print(n->data, 8, 1);
+
+	wes = 7777;
+	n = list_get(validation_pixels, wes);
+	printf("Lets print validation matrix (%lu)(%s)(%s)\n", wes, n ? "GOOD" : "BAD", n->data ? "GOOD" : "BAD");
+	matrix_print(n->data, 8, 1);
+	n = list_get(validation_labels, wes);
+	printf("Lets print validation label (%lu)(%s)(%s)\n", wes, n ? "GOOD" : "BAD", n->data ? "GOOD" : "BAD");
 	matrix_print(n->data, 8, 1);
 
 	neural_network_t *w;
