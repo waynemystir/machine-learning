@@ -25,7 +25,6 @@ void neural_net_init(neural_network_t **neural_net, int num_neurons[3]) {
 	*neural_net = nn;
 	memcpy(nn->num_neurons, num_neurons, 3 * sizeof(int));
 
-	int i, j;
 	matrix *wts1, *wts2, *bias1, *bias2;
 
 	matrix_init(&wts1, num_neurons[1], num_neurons[0], NULL);
@@ -92,20 +91,9 @@ int main() {
 	get_images(TEST_IMAGES_FILENAME, num_test_images, num_rows, num_cols, &test_pixels);
 	printf("We got the images (%lu)(%lu)...\n", train_pixels->count, test_pixels->count);
 
-	linked_list_node_t *n = list_get(train_pixels, 0);
-	printf("Lets print matrix (%d)(%s)(%s)\n", 0, n ? "GOOD" : "BAD", n->data ? "GOOD" : "BAD");
-	matrix_print(n->data, 8, 1);
-
-	n = list_get(train_pixels, 3);
-	printf("Lets print matrix (%d)(%s)(%s)\n", 3, n ? "GOOD" : "BAD", n->data ? "GOOD" : "BAD");
-	matrix_print(n->data, 8, 1);
-
-	n = list_get(train_pixels, 7);
-	printf("Lets print matrix (%d)(%s)(%s)\n", 7, n ? "GOOD" : "BAD", n->data ? "GOOD" : "BAD");
-	matrix_print(n->data, 8, 1);
-
-	n = list_get(train_pixels, 13);
-	printf("Lets print matrix (%d)(%s)(%s)\n", 13, n ? "GOOD" : "BAD", n->data ? "GOOD" : "BAD");
+	size_t wes = 13131;
+	linked_list_node_t *n = list_get(train_pixels, wes);
+	printf("Lets print matrix (%lu)(%s)(%s)\n", wes, n ? "GOOD" : "BAD", n->data ? "GOOD" : "BAD");
 	matrix_print(n->data, 8, 1);
 
 	neural_network_t *w;
