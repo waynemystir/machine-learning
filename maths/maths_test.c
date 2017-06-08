@@ -9,7 +9,7 @@ void add_ten(double z, double *ret_value) {
 
 int main() {
 	printf("matrix_test-0\n");
-	matrix *m1, *m2, *product;
+	matrix_t *m1, *m2, *product;
 	matrix_init(&m1, 2, 3, NULL);
 	matrix_init(&m2, 3, 2, NULL);
 	matrix_set(m1, 0, 0, 1);
@@ -30,7 +30,7 @@ int main() {
 	matrix_print(m1, 7, 1);
 	printf("matrix_test-1 (%lu)\n", matrix_num_rows(m1));
 
-	matrix *mg;
+	matrix_t *mg;
 	matrix_init(&mg, 5, 6, NULL);
 	matrix_elementwise_func_3(mg, gaussrand);
 	matrix_print(mg, 7, 1);

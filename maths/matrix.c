@@ -5,14 +5,15 @@
 
 #include "matrix.h"
 
-struct _matrix {
+struct matrix {
 	size_t num_rows;
 	size_t num_cols;
 	double **data;
 };
 
-void matrix_init(matrix **m, size_t num_rows, size_t num_cols, double **data) {
-	matrix *mx = malloc(SZ_MATRIX);
+void matrix_init(matrix_t **m, size_t num_rows, size_t num_cols, double **data) {
+	if (!m) return;
+	matrix_t *mx = malloc(SZ_MATRIX);
 	if (!mx) return;
 	memset(mx, '\0', SZ_MATRIX);
 	*m = mx;
@@ -28,27 +29,35 @@ void matrix_init(matrix **m, size_t num_rows, size_t num_cols, double **data) {
 		mx->data[i] = calloc(num_cols, sizeof(double));
 }
 
-size_t matrix_num_rows(matrix *m) {
+void matrix_zero_init(matrix_t **m, size_t num_rows, size_t num_cols) {
+	if (!m) return;
+	matrix_init(m, num_rows, num_cols, NULL);
+	for (size_t i = 0; i < num_rows; i++)
+		for (size_t j = 0; j < num_cols; j++)
+			matrix_set(*m, i, j, 0);
+}
+
+size_t matrix_num_rows(matrix_t *m) {
 	if (!m) return 0;
 	return m->num_rows;
 }
 
-size_t matrix_num_cols(matrix *m) {
+size_t matrix_num_cols(matrix_t *m) {
 	if (!m) return 0;
 	return m->num_cols;
 }
 
-double matrix_get(matrix *m, size_t row, size_t col) {
+double matrix_get(matrix_t *m, size_t row, size_t col) {
 	if (!m || !m->data) return DBL_MAX;
 	return m->data[row][col];
 }
 
-void matrix_set(matrix *m, size_t row, size_t col, double value) {
+void matrix_set(matrix_t *m, size_t row, size_t col, double value) {
 	if (!m || !m->data) return;
 	m->data[row][col] = value;
 }
 
-void matrix_product(matrix *m1, matrix *m2, matrix **product) {
+void matrix_product(matrix_t *m1, matrix_t *m2, matrix_t **product) {
 	if (!m1 || !m2 || m1->num_cols != m2->num_rows)
 		return;
 
@@ -64,7 +73,7 @@ void matrix_product(matrix *m1, matrix *m2, matrix **product) {
 		}
 }
 
-void matrix_sum(matrix *m1, matrix *m2, matrix **sum) {
+void matrix_sum(matrix_t *m1, matrix_t *m2, matrix_t **sum) {
 	if (!m1 || !m2 || m1->num_rows != m2->num_rows || m1->num_cols != m2->num_cols)
 		return;
 	matrix_init(sum, m1->num_rows, m1->num_cols, NULL);
@@ -73,7 +82,7 @@ void matrix_sum(matrix *m1, matrix *m2, matrix **sum) {
 			matrix_set(*sum, i, j, matrix_get(m1, i, j) + matrix_get(m2, i, j));
 }
 
-void matrix_elementwise_func_1(matrix *m, elementwise_function_1 ef) {
+void matrix_elementwise_func_1(matrix_t *m, elementwise_function_1 ef) {
 	if (!m || !m->data)
 		return;
 
@@ -82,7 +91,7 @@ void matrix_elementwise_func_1(matrix *m, elementwise_function_1 ef) {
 			ef(&m->data[i][j]);
 }
 
-void matrix_elementwise_func_2(matrix *m, elementwise_function_2 ef) {
+void matrix_elementwise_func_2(matrix_t *m, elementwise_function_2 ef) {
 	if (!m || !m->data)
 		return;
 
@@ -91,7 +100,7 @@ void matrix_elementwise_func_2(matrix *m, elementwise_function_2 ef) {
 			ef(m->data[i][j], &m->data[i][j]);
 }
 
-void matrix_elementwise_func_3(matrix *m, elementwise_function_3 ef) {
+void matrix_elementwise_func_3(matrix_t *m, elementwise_function_3 ef) {
 	if (!m || !m->data)
 		return;
 
@@ -100,7 +109,7 @@ void matrix_elementwise_func_3(matrix *m, elementwise_function_3 ef) {
 			matrix_set(m, i, j, ef());
 }
 
-void matrix_print(matrix *m, int precision, int zero_precision) {
+void matrix_print(matrix_t *m, int precision, int zero_precision) {
 	if (!m) {
 		printf("matrix_print-NULL\n");
 		return;

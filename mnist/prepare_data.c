@@ -26,10 +26,11 @@ int images_header(char *filename, uint32_t *magic_number, uint32_t *num_images, 
 		return -1;
 	}
 
+	uint32_t expected_magic_number = 2051;
 	fread(magic_number, sizeof(uint32_t), 1, f);
 	*magic_number = swap_uint32(*magic_number);
-	if (*magic_number != 2051) {
-		printf("Magic number (%u) from file (%s) is wrong. It should be 2051.\n", *magic_number, path);
+	if (*magic_number != expected_magic_number) {
+		printf("Magic number (%u) from file (%s) is wrong. It should be (%d).\n", *magic_number, path, expected_magic_number);
 		return -1;
 	}
 
@@ -45,6 +46,31 @@ int images_header(char *filename, uint32_t *magic_number, uint32_t *num_images, 
 	}
 
 	printf("images_header (%s)(%u)(%u)(%u)(%u)\n", path, *magic_number, *num_images, *num_rows, *num_cols);
+	fclose(f);
+	return 0;
+}
+
+int labels_header(char *filename, uint32_t *magic_number, uint32_t *num_labels) {
+	char path[256] = {0};
+	sprintf(path, "%s/%s", FOLDER, filename);
+	FILE *f = fopen(path, "rb");
+	if (!f) {
+		printf("Could not open file (%s).\n", path);
+		return -1;
+	}
+
+	uint32_t expected_magic_number = 2049;
+	fread(magic_number, sizeof(uint32_t), 1, f);
+	*magic_number = swap_uint32(*magic_number);
+	if (*magic_number != expected_magic_number) {
+		printf("Magic number (%u) from file (%s) is wrong. It should be (%d).\n", *magic_number, path, expected_magic_number);
+		return -1;
+	}
+
+	fread(num_labels, sizeof(uint32_t), 1, f);
+	*num_labels = swap_uint32(*num_labels);
+
+	printf("labels_header (%s)(%u)(%u)\n", path, *magic_number, *num_labels);
 	fclose(f);
 	return 0;
 }
@@ -71,7 +97,7 @@ int get_images(char *filename, uint32_t num_images, uint32_t num_rows, uint32_t 
 	unsigned char pixel;
 
 	for (int i = 0; i < num_images; i++) {
-                matrix *m;
+                matrix_t *m;
                 matrix_init(&m, num_rows * num_cols, 1, NULL);
                 for (int j = 0; j < num_rows * num_cols; j++) {
 			fread(&pixel, sizeof(unsigned char), 1, f);
@@ -85,31 +111,37 @@ int get_images(char *filename, uint32_t num_images, uint32_t num_rows, uint32_t 
 	return 0;
 }
 
-//int main() {
-//	printf("prepare_data-0 (%lu)(%lu)\n", sizeof(uint32_t), sizeof(unsigned int));
-//
-//	FILE *f;
-//	uint32_t magic_number;
-//	uint32_t num_images;
-//	uint32_t num_rows;
-//	uint32_t num_cols;
-//	images_header(TRAIN_IMAGES_FILENAME, &magic_number, &num_images, &num_rows, &num_cols);
-//	images_header(TEST_IMAGES_FILENAME, &magic_number, &num_images, &num_rows, &num_cols);
-//
-//	unsigned char pixel;
-//	unsigned char arr[num_rows][num_cols];
-//	for (int r = 0; r < num_images; r++) {
-//		for (int i = 0; i < num_rows; i++) {
-//			for (int j = 0; j < num_cols; j++) {
-//				num_read = fread(&pixel, sizeof(unsigned char), 1, f);
-//				arr[i][j] = pixel;
-////				float w = pixel;
-////				printf("BBB (%u)(%f)", arr[i][j], w);
-//				if (r == 13131) printf("B(%u)(%f)", arr[i][j], (float)arr[i][j]/256);
-//			}
-//		}
-//	}
-//	printf("\n");
-//
-//	return 0;
-//}
+int get_labels(char *filename, uint32_t num_labels, linked_list_t **labels) {
+        char path[256] = {0};
+        sprintf(path, "%s/%s", FOLDER, filename);
+        FILE *f = fopen(path, "rb");
+        if (!f) {
+                printf("Could not open file (%s).\n", path);
+                return -1;
+        }
+
+	int fs = fseek(f, LABELOFFSET, SEEK_SET);
+	if (fs == -1) {
+		printf("A problem occurred while seeking (%s)(%d).\n", path, LABELOFFSET);
+		return -1;
+	}
+
+	linked_list_t *lbs = malloc(SZ_LL);
+	if (!lbs) return -1;
+	memset(lbs, '\0', SZ_LL);
+	if (labels) *labels = lbs;
+	unsigned char label;
+
+	for (int i = 0; i < num_labels; i++) {
+		matrix_t *m;
+		matrix_zero_init(&m, 10, 1);
+		fread(&label, sizeof(unsigned char), 1, f);
+		size_t lp = label;
+		matrix_set(m, lp, 0, 1);
+		list_add_tail(lbs, m, NULL);
+	}
+
+	fclose(f);
+	return 0;
+}
+

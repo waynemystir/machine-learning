@@ -11,8 +11,8 @@
 typedef struct neural_network {
 	int num_neurons[3];
 	size_t num_weights;
-	matrix *weights[2];
-	matrix *biases[2];
+	matrix_t *weights[2];
+	matrix_t *biases[2];
 } neural_network_t;
 
 void neural_net_init(neural_network_t **neural_net, int num_neurons[3]) {
@@ -25,7 +25,7 @@ void neural_net_init(neural_network_t **neural_net, int num_neurons[3]) {
 	*neural_net = nn;
 	memcpy(nn->num_neurons, num_neurons, 3 * sizeof(int));
 
-	matrix *wts1, *wts2, *bias1, *bias2;
+	matrix_t *wts1, *wts2, *bias1, *bias2;
 
 	matrix_init(&wts1, num_neurons[1], num_neurons[0], NULL);
 	matrix_init(&wts2, num_neurons[2], num_neurons[1], NULL);
@@ -57,8 +57,8 @@ void sigmoid_arr(double *arr, size_t num, double **ret_array) {
 	*ret_array = ret_arr;
 }
 
-void feedforward(neural_network_t *nn, matrix *a, matrix **output) {
-	matrix *mp, *ms;
+void feedforward(neural_network_t *nn, matrix_t *a, matrix_t **output) {
+	matrix_t *mp, *ms;
 	for (int i = 0; i < 2; i++) {
 		matrix_product(nn->weights[i], a, &mp);
 		matrix_sum(mp, nn->biases[i], &ms);
@@ -73,27 +73,44 @@ void feedforward(neural_network_t *nn, matrix *a, matrix **output) {
 int main() {
 	printf("network-0 (%lu)(%lu)(%lu)\n", sizeof(unsigned int), sizeof(uint32_t), sizeof(double));
 
-        uint32_t magic_number, num_train_images, num_test_images, num_rows, num_cols;
-        int rih = images_header(TRAIN_IMAGES_FILENAME, &magic_number, &num_train_images, &num_rows, &num_cols);
+	uint32_t magic_number_images, magic_number_labels, num_train_images, num_train_labels, num_test_images, num_test_labels, num_rows, num_cols;
+	int rih = images_header(TRAIN_IMAGES_FILENAME, &magic_number_images, &num_train_images, &num_rows, &num_cols);
 	if (rih == -1) {
 		printf("There was a problem collecting training images.\n");
 		return -1;
 	}
 
-        rih = images_header(TEST_IMAGES_FILENAME, &magic_number, &num_test_images, &num_rows, &num_cols);
+	rih = images_header(TEST_IMAGES_FILENAME, &magic_number_images, &num_test_images, &num_rows, &num_cols);
 	if (rih == -1) {
 		printf("There was a problem collecting test images.\n");
 		return -1;
 	}
 
-	linked_list_t *train_pixels, *test_pixels;
+	rih = labels_header(TRAIN_LABELS_FILENAME, &magic_number_labels, &num_train_labels);
+	if (rih == -1) {
+		printf("There was a problem collecting training labels.\n");
+		return -1;
+	}
+
+	rih = labels_header(TEST_LABELS_FILENAME, &magic_number_labels, &num_test_labels);
+	if (rih == -1) {
+		printf("There was a problem collecting testing labels.\n");
+		return -1;
+	}
+
+	linked_list_t *train_pixels, *test_pixels, *train_labels, *test_labels;
 	get_images(TRAIN_IMAGES_FILENAME, num_train_images, num_rows, num_cols, &train_pixels);
 	get_images(TEST_IMAGES_FILENAME, num_test_images, num_rows, num_cols, &test_pixels);
 	printf("We got the images (%lu)(%lu)...\n", train_pixels->count, test_pixels->count);
+	get_labels(TRAIN_LABELS_FILENAME, num_train_labels, &train_labels);
+	get_labels(TEST_LABELS_FILENAME, num_test_labels, &test_labels);
 
-	size_t wes = 13131;
+	size_t wes = 43432;
 	linked_list_node_t *n = list_get(train_pixels, wes);
 	printf("Lets print matrix (%lu)(%s)(%s)\n", wes, n ? "GOOD" : "BAD", n->data ? "GOOD" : "BAD");
+	matrix_print(n->data, 8, 1);
+	n = list_get(train_labels, wes);
+	printf("Lets print label (%lu)(%s)(%s)\n", wes, n ? "GOOD" : "BAD", n->data ? "GOOD" : "BAD");
 	matrix_print(n->data, 8, 1);
 
 	neural_network_t *w;
