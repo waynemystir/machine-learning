@@ -25,15 +25,15 @@ int main() {
 	matrix_set(m2, 2, 0, 11);
 	matrix_set(m2, 2, 1, 12);
 	matrix_product(m1, m2, &product);
-	matrix_print(product);
+	matrix_print(product, 7, 1);
 	matrix_elementwise_func_2(m1, add_ten);
-	matrix_print(m1);
+	matrix_print(m1, 7, 1);
 	printf("matrix_test-1 (%lu)\n", matrix_num_rows(m1));
 
 	matrix *mg;
 	matrix_init(&mg, 5, 6, NULL);
 	matrix_elementwise_func_3(mg, gaussrand);
-	matrix_print(mg);
+	matrix_print(mg, 7, 1);
 
 	return 0;
 }

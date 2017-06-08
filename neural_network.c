@@ -3,8 +3,10 @@
 #include <string.h>
 #include <math.h>
 
+#include "common.h"
 #include "maths.h"
 #include "matrix.h"
+#include "prepare_data.h"
 
 typedef struct neural_network {
 	int num_neurons[3];
@@ -70,7 +72,41 @@ void feedforward(neural_network_t *nn, matrix *a, matrix **output) {
 }
 
 int main() {
-	printf("network-0 (%lu)(%lu)\n", sizeof(int), sizeof(double));
+	printf("network-0 (%lu)(%lu)(%lu)\n", sizeof(unsigned int), sizeof(uint32_t), sizeof(double));
+
+        uint32_t magic_number, num_train_images, num_test_images, num_rows, num_cols;
+        int rih = images_header(TRAIN_IMAGES_FILENAME, &magic_number, &num_train_images, &num_rows, &num_cols);
+	if (rih == -1) {
+		printf("There was a problem collecting training images.\n");
+		return -1;
+	}
+
+        rih = images_header(TEST_IMAGES_FILENAME, &magic_number, &num_test_images, &num_rows, &num_cols);
+	if (rih == -1) {
+		printf("There was a problem collecting test images.\n");
+		return -1;
+	}
+
+	linked_list_t *train_pixels, *test_pixels;
+	get_images(TRAIN_IMAGES_FILENAME, num_train_images, num_rows, num_cols, &train_pixels);
+	get_images(TEST_IMAGES_FILENAME, num_test_images, num_rows, num_cols, &test_pixels);
+	printf("We got the images (%lu)(%lu)...\n", train_pixels->count, test_pixels->count);
+
+	linked_list_node_t *n = list_get(train_pixels, 0);
+	printf("Lets print matrix (%d)(%s)(%s)\n", 0, n ? "GOOD" : "BAD", n->data ? "GOOD" : "BAD");
+	matrix_print(n->data, 8, 1);
+
+	n = list_get(train_pixels, 3);
+	printf("Lets print matrix (%d)(%s)(%s)\n", 3, n ? "GOOD" : "BAD", n->data ? "GOOD" : "BAD");
+	matrix_print(n->data, 8, 1);
+
+	n = list_get(train_pixels, 7);
+	printf("Lets print matrix (%d)(%s)(%s)\n", 7, n ? "GOOD" : "BAD", n->data ? "GOOD" : "BAD");
+	matrix_print(n->data, 8, 1);
+
+	n = list_get(train_pixels, 13);
+	printf("Lets print matrix (%d)(%s)(%s)\n", 13, n ? "GOOD" : "BAD", n->data ? "GOOD" : "BAD");
+	matrix_print(n->data, 8, 1);
 
 	neural_network_t *w;
 	int sizes[] = {273, 397, 941};

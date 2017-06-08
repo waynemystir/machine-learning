@@ -100,15 +100,17 @@ void matrix_elementwise_func_3(matrix *m, elementwise_function_3 ef) {
 			matrix_set(m, i, j, ef());
 }
 
-void matrix_print(matrix *m) {
+void matrix_print(matrix *m, int precision, int zero_precision) {
 	if (!m) {
 		printf("matrix_print-NULL\n");
 		return;
 	}
 	for (int i = 0; i < m->num_rows; i++) {
 		if (i != 0) printf("\n");
-		for (int j = 0; j < m->num_cols; j++)
-			printf("%.1f  ", matrix_get(m, i, j));
+		for (int j = 0; j < m->num_cols; j++) {
+			double w = matrix_get(m, i, j);
+			printf("%.*f  ", w == 0 ? zero_precision : precision, w);
+		}
 	}
 	printf("\n");
 }

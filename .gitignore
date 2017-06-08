@@ -4,3 +4,5 @@ cmake_*
 Makefile
 NeuralNet
 *.a
+*.gz
+*-ubyte
