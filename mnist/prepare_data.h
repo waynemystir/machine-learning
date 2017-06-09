@@ -14,10 +14,10 @@ int get_images(char *filename,
 	uint32_t num_rows,
 	uint32_t num_cols,
 	size_t num_validation_pixels,
-	linked_list_t **train_pixels,
-	linked_list_t **validation_pixels);
+	list_t **train_pixels,
+	list_t **validation_pixels);
 int get_labels(char *filename,
 	uint32_t num_labels,
 	size_t num_validation_labels,
-	linked_list_t **train_labels,
-	linked_list_t **validation_labels);
+	list_t **train_labels,
+	list_t **validation_labels);

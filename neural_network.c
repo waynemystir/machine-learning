@@ -12,6 +12,12 @@ struct neural_network {
 	size_t num_weights;
 	matrix_t *weights[2];
 	matrix_t *biases[2];
+	list_t *training_data;
+	list_t *training_labels;
+	list_t *validation_data;
+	list_t *validation_labels;
+	list_t *test_data;
+	list_t *test_labels;
 };
 
 void neural_net_init(neural_network_t **neural_net, int num_neurons[3]) {
@@ -69,25 +75,25 @@ void feedforward(neural_network_t *nn, matrix_t *a, matrix_t **output) {
 	*output = a;
 }
 
-void sgd(linked_list_t *training_data, size_t epochs, size_t mini_batch_size, double eta, linked_list_t *test_data) {
+void sgd(list_t *training_data, size_t epochs, size_t mini_batch_size, double eta, list_t *test_data) {
 	if (!training_data) return;
 
 	for (size_t i = 0; i < epochs; i++) {
 		list_shuffle(training_data);
-		for (size_t j = 0; j < training_data->count; j+= mini_batch_size)
+		for (size_t j = 0; j < list_len(training_data); j+= mini_batch_size)
 			update_mini_batch(training_data, j, j + mini_batch_size, eta);
 		if (test_data)
-			printf("Epoch (%lu): (%lu) / (%lu) \n", i + 1, evaluate(test_data), test_data->count);
+			printf("Epoch (%lu): (%lu) / (%lu) \n", i + 1, evaluate(test_data), list_len(test_data));
 		else
 			printf("Epoch (%lu) complete\n", i + 1);
 	}
 }
 
-void update_mini_batch(linked_list_t *training_data, size_t start, size_t end, double eta) {
+void update_mini_batch(list_t *training_data, size_t start, size_t end, double eta) {
 
 }
 
-size_t evaluate(linked_list_t *test_data) {
+size_t evaluate(list_t *test_data) {
 	return 1;
 }
 
@@ -119,35 +125,42 @@ int main() {
 		return -1;
 	}
 
-	size_t num_validation = 10 * 1000;
-	linked_list_t *train_pixels, *validation_pixels, *test_pixels, *train_labels, *validation_labels, *test_labels;
-	get_images(TRAIN_IMAGES_FILENAME, num_train_images, num_rows, num_cols, num_validation, &train_pixels, &validation_pixels);
-	get_images(TEST_IMAGES_FILENAME, num_test_images, num_rows, num_cols, 0, &test_pixels, NULL);
-	printf("We got the images (%lu)(%lu)(%lu)...\n", train_pixels->count, validation_pixels->count, test_pixels->count);
-	get_labels(TRAIN_LABELS_FILENAME, num_train_labels, num_validation, &train_labels, &validation_labels);
-	get_labels(TEST_LABELS_FILENAME, num_test_labels, 0, &test_labels, NULL);
-	printf("We got the labels (%lu)(%lu)(%lu)...\n", train_labels->count, validation_labels->count, test_labels->count);
-
-	size_t wes = 43432;
-	linked_list_node_t *n = list_get(train_pixels, wes);
-	printf("Lets print training matrix (%lu)(%s)(%s)\n", wes, n ? "GOOD" : "BAD", n->data ? "GOOD" : "BAD");
-	matrix_print(n->data, 8, 1);
-	n = list_get(train_labels, wes);
-	printf("Lets print training label (%lu)(%s)(%s)\n", wes, n ? "GOOD" : "BAD", n->data ? "GOOD" : "BAD");
-	matrix_print(n->data, 8, 1);
-
-	wes = 7777;
-	n = list_get(validation_pixels, wes);
-	printf("Lets print validation matrix (%lu)(%s)(%s)\n", wes, n ? "GOOD" : "BAD", n->data ? "GOOD" : "BAD");
-	matrix_print(n->data, 8, 1);
-	n = list_get(validation_labels, wes);
-	printf("Lets print validation label (%lu)(%s)(%s)\n", wes, n ? "GOOD" : "BAD", n->data ? "GOOD" : "BAD");
-	matrix_print(n->data, 8, 1);
-
 	neural_network_t *w;
 	int sizes[] = {273, 397, 941};
 	neural_net_init(&w, sizes);
 	for (int i = 0; i < 3; i++) printf("sz(%d)(%d)\n", i, w->num_neurons[i]);
+
+	size_t num_validation = 10 * 1000;
+	get_images(TRAIN_IMAGES_FILENAME, num_train_images, num_rows, num_cols, num_validation, &w->training_data, &w->validation_data);
+	get_images(TEST_IMAGES_FILENAME, num_test_images, num_rows, num_cols, 0, &w->test_data, NULL);
+	printf("We got the images (%lu)(%lu)(%lu)...\n", list_len(w->training_data), list_len(w->validation_data), list_len(w->test_data));
+	get_labels(TRAIN_LABELS_FILENAME, num_train_labels, num_validation, &w->training_labels, &w->validation_labels);
+	get_labels(TEST_LABELS_FILENAME, num_test_labels, 0, &w->test_labels, NULL);
+	printf("We got the labels (%lu)(%lu)(%lu)...\n", list_len(w->training_labels), list_len(w->validation_labels), list_len(w->test_labels));
+
+	size_t wes = 43432;
+	matrix_t *m = list_get(w->training_data, wes);
+	printf("Lets print training matrix (%lu)(%s)\n", wes, m ? "GOOD" : "BAD");
+//	matrix_print(m, 8, 1);
+	m = list_get(w->training_labels, wes);
+	printf("Lets print training label (%lu)(%s)\n", wes, m ? "GOOD" : "BAD");
+	matrix_print(m, 8, 1);
+
+	wes = 7777;
+	m = list_get(w->validation_data, wes);
+	printf("Lets print validation matrix (%lu)(%s)\n", wes, m ? "GOOD" : "BAD");
+//	matrix_print(m, 8, 1);
+	m = list_get(w->validation_labels, wes);
+	printf("Lets print validation label (%lu)(%s)\n", wes, m ? "GOOD" : "BAD");
+	matrix_print(m, 8, 1);
+
+	wes = 6666;
+	m = list_get(w->test_data, wes);
+	printf("Lets print test matrix (%lu)(%s)\n", wes, m ? "GOOD" : "BAD");
+	matrix_print(m, 8, 1);
+	m = list_get(w->test_labels, wes);
+	printf("Lets print test label (%lu)(%s)\n", wes, m ? "GOOD" : "BAD");
+	matrix_print(m, 8, 1);
 
 //	printf("XXXXX (%f)(%f)(%f)(%f)\n", exp(-6), sigmoid(6), exp(6), sigmoid(-6));
 

@@ -80,8 +80,8 @@ int get_images(char *filename,
 	uint32_t num_rows,
 	uint32_t num_cols,
 	size_t num_validation_pixels,
-	linked_list_t **train_pixels,
-	linked_list_t **validation_pixels) {
+	list_t **train_pixels,
+	list_t **validation_pixels) {
 
 	if (num_validation_pixels > num_images) {
 		printf("Error: num_validation_pixels > num_images\n");
@@ -102,20 +102,18 @@ int get_images(char *filename,
 		return -1;
 	}
 
-	linked_list_t *tr_pxs, *vd_pxs = NULL;
-	tr_pxs = malloc(SZ_LL);
+	size_t num_train_pixels = num_images - num_validation_pixels;
+	list_t *tr_pxs, *vd_pxs = NULL;
+	list_init(&tr_pxs, num_train_pixels, NULL);
 	if (!tr_pxs) return -1;
-	memset(tr_pxs, '\0', SZ_LL);
 	if (train_pixels) *train_pixels = tr_pxs;
 
 	if (num_validation_pixels > 0 && validation_pixels) {
-		vd_pxs = malloc(SZ_LL);
+		list_init(&vd_pxs, num_validation_pixels, NULL);
 		if (!vd_pxs) return -1;
-		memset(vd_pxs, '\0', SZ_LL);
 		*validation_pixels = vd_pxs;
 	}
 
-	size_t num_train_pixels = num_images - num_validation_pixels;
 	unsigned char pixel;
 
 	for (int i = 0; i < num_images; i++) {
@@ -127,9 +125,9 @@ int get_images(char *filename,
 			matrix_set(m, j, 0, value);
 		}
 		if (i < num_train_pixels)
-			list_add_tail(tr_pxs, m, NULL);
+			list_set(tr_pxs, i, m);
 		else if (vd_pxs)
-			list_add_tail(vd_pxs, m, NULL);
+			list_set(vd_pxs, i - num_train_pixels, m);
 		else free(m);
 	}
 
@@ -140,8 +138,8 @@ int get_images(char *filename,
 int get_labels(char *filename,
 	uint32_t num_labels,
 	size_t num_validation_labels,
-	linked_list_t **train_labels,
-	linked_list_t **validation_labels) {
+	list_t **train_labels,
+	list_t **validation_labels) {
 
 	if (num_validation_labels > num_labels) {
 		printf("Error: num_validation_labels > num_labels\n");
@@ -162,20 +160,18 @@ int get_labels(char *filename,
 		return -1;
 	}
 
-	linked_list_t *tr_lbs, *vd_lbs = NULL;
-	tr_lbs = malloc(SZ_LL);
+	size_t num_train_labels = num_labels - num_validation_labels;
+	list_t *tr_lbs, *vd_lbs = NULL;
+	list_init(&tr_lbs, num_train_labels, NULL);
 	if (!tr_lbs) return -1;
-	memset(tr_lbs, '\0', SZ_LL);
 	if (train_labels) *train_labels = tr_lbs;
 
 	if (num_validation_labels > 0 && validation_labels) {
-		vd_lbs = malloc(SZ_LL);
+		list_init(&vd_lbs, num_validation_labels, NULL);
 		if (!vd_lbs) return -1;
-		memset(vd_lbs, '\0', SZ_LL);
 		*validation_labels = vd_lbs;
 	}
 
-	size_t num_train_labels = num_labels - num_validation_labels;
 	unsigned char label;
 
 	for (int i = 0; i < num_labels; i++) {
@@ -186,9 +182,9 @@ int get_labels(char *filename,
 		matrix_set(m, lp, 0, 1);
 
 		if (i < num_train_labels)
-			list_add_tail(tr_lbs, m, NULL);
+			list_set(tr_lbs, i, m);
 		else if (vd_lbs)
-			list_add_tail(vd_lbs, m, NULL);
+			list_set(vd_lbs, i - num_train_labels, m);
 		else free(m);
 	}
 
