@@ -3,17 +3,16 @@
 #include <string.h>
 #include <math.h>
 
-#include "common.h"
+#include "neural_network.h"
 #include "maths.h"
-#include "matrix.h"
 #include "prepare_data.h"
 
-typedef struct neural_network {
+struct neural_network {
 	int num_neurons[3];
 	size_t num_weights;
 	matrix_t *weights[2];
 	matrix_t *biases[2];
-} neural_network_t;
+};
 
 void neural_net_init(neural_network_t **neural_net, int num_neurons[3]) {
 	if (!neural_net) return;
@@ -68,6 +67,28 @@ void feedforward(neural_network_t *nn, matrix_t *a, matrix_t **output) {
 		ms = NULL;
 	}
 	*output = a;
+}
+
+void sgd(linked_list_t *training_data, size_t epochs, size_t mini_batch_size, double eta, linked_list_t *test_data) {
+	if (!training_data) return;
+
+	for (size_t i = 0; i < epochs; i++) {
+		list_shuffle(training_data);
+		for (size_t j = 0; j < training_data->count; j+= mini_batch_size)
+			update_mini_batch(training_data, j, j + mini_batch_size, eta);
+		if (test_data)
+			printf("Epoch (%lu): (%lu) / (%lu) \n", i + 1, evaluate(test_data), test_data->count);
+		else
+			printf("Epoch (%lu) complete\n", i + 1);
+	}
+}
+
+void update_mini_batch(linked_list_t *training_data, size_t start, size_t end, double eta) {
+
+}
+
+size_t evaluate(linked_list_t *test_data) {
+	return 1;
 }
 
 int main() {

@@ -15,6 +15,7 @@ typedef struct linked_list {
 void list_add_head(linked_list_t *list, void *data, linked_list_node_t **new_node);
 void list_add_tail(linked_list_t *list, void *data, linked_list_node_t **new_node);
 linked_list_node_t *list_get(linked_list_t *list, size_t index);
+void list_shuffle(linked_list_t *list);
 void list_split(linked_list_t *list, size_t index, linked_list_t **new_list_1, linked_list_t **new_list_2);
 
 #define SZ_LLND sizeof(linked_list_node_t)

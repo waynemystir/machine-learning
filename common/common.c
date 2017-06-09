@@ -52,6 +52,10 @@ linked_list_node_t *list_get(linked_list_t *list, size_t index) {
 	return NULL;
 }
 
+void list_shuffle(linked_list_t *list) {
+
+}
+
 void list_split(linked_list_t *list, size_t index, linked_list_t **new_list_1, linked_list_t **new_list_2) {
 	if (!list || !new_list_1 || !new_list_2) return;
 
