@@ -20,6 +20,7 @@ void matrix_elementwise_func_2(matrix_t *m, elementwise_function_2 ef);
 void matrix_elementwise_func_3(matrix_t *m, elementwise_function_3 ef);
 void matrix_elementwise_func_4(matrix_t *m, elementwise_function_4 ef);
 void matrix_print(matrix_t *m, int precision, int zero_precision);
+void matrix_free(matrix_t *m);
 
 #define SZ_MATRIX sizeof(matrix_t)
 

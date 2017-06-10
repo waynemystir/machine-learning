@@ -7,17 +7,18 @@
 #include "maths.h"
 #include "prepare_data.h"
 
+#define NUMBER_OF_LAYERS 3 // including input, hidden, output
+
 struct neural_network {
-	int num_neurons[3];
-	size_t num_weights;
-	matrix_t *weights[2];
-	matrix_t *biases[2];
+	int num_neurons[NUMBER_OF_LAYERS];
+	list_t *weights;
+	list_t *biases;
 	list_t *training_data;
-	list_t *training_labels;
+	list_t *training_results;
 	list_t *validation_data;
-	list_t *validation_labels;
+	list_t *validation_results;
 	list_t *test_data;
-	list_t *test_labels;
+	list_t *test_results;
 };
 
 void neural_net_init(neural_network_t **neural_net, int num_neurons[3]) {
@@ -30,20 +31,23 @@ void neural_net_init(neural_network_t **neural_net, int num_neurons[3]) {
 	*neural_net = nn;
 	memcpy(nn->num_neurons, num_neurons, 3 * sizeof(int));
 
+	list_init(&nn->weights, NUMBER_OF_LAYERS - 1, NULL);
+	list_init(&nn->biases, NUMBER_OF_LAYERS - 1, NULL);
+
 	matrix_t *wts1, *wts2, *bias1, *bias2;
 
 	matrix_init(&wts1, num_neurons[1], num_neurons[0], NULL);
 	matrix_init(&wts2, num_neurons[2], num_neurons[1], NULL);
-	nn->weights[0] = wts1;
-	nn->weights[1] = wts2;
+	list_set(nn->weights, 0, wts1);
+	list_set(nn->weights, 1, wts2);
 
 	matrix_elementwise_func_3(wts1, gaussrand);
 	matrix_elementwise_func_3(wts2, gaussrand);
 
 	matrix_init(&bias1, num_neurons[1], 1, NULL);
 	matrix_init(&bias2, num_neurons[2], 1, NULL);
-	nn->biases[0] = bias1;
-	nn->biases[1] = bias2;
+	list_set(nn->biases, 0, bias1);
+	list_set(nn->biases, 1, bias2);
 
 	matrix_elementwise_func_3(bias1, gaussrand);
 	matrix_elementwise_func_3(bias2, gaussrand);
@@ -64,9 +68,9 @@ void sigmoid_arr(double *arr, size_t num, double **ret_array) {
 
 void feedforward(neural_network_t *nn, matrix_t *a, matrix_t **output) {
 	matrix_t *mp, *ms;
-	for (int i = 0; i < 2; i++) {
-		matrix_product(nn->weights[i], a, &mp);
-		matrix_sum(mp, nn->biases[i], &ms);
+	for (int i = 0; i < NUMBER_OF_LAYERS - 1; i++) {
+		matrix_product(list_get(nn->weights, i), a, &mp);
+		matrix_sum(mp, list_get(nn->biases, i), &ms);
 		matrix_elementwise_func_2(ms, sigmoid);
 		a = ms;
 		mp = NULL;
@@ -75,21 +79,66 @@ void feedforward(neural_network_t *nn, matrix_t *a, matrix_t **output) {
 	*output = a;
 }
 
-void sgd(list_t *training_data, size_t epochs, size_t mini_batch_size, double eta, list_t *test_data) {
-	if (!training_data) return;
+void sgd(neural_network_t *nn, size_t epochs, size_t mini_batch_size, double eta) {
+	if (!nn || !nn->training_data) return;
 
 	for (size_t i = 0; i < epochs; i++) {
-		list_shuffle(training_data);
-		for (size_t j = 0; j < list_len(training_data); j+= mini_batch_size)
-			update_mini_batch(training_data, j, j + mini_batch_size, eta);
-		if (test_data)
-			printf("Epoch (%lu): (%lu) / (%lu) \n", i + 1, evaluate(test_data), list_len(test_data));
+		list_shuffle(nn->training_data);
+		for (size_t j = 0; j < list_len(nn->training_data); j+= mini_batch_size)
+			update_mini_batch(nn, j, j + mini_batch_size, eta);
+		if (nn->test_data)
+			printf("Epoch (%lu): (%lu) / (%lu) \n", i + 1, evaluate(nn->test_data), list_len(nn->test_data));
 		else
 			printf("Epoch (%lu) complete\n", i + 1);
 	}
 }
 
-void update_mini_batch(list_t *training_data, size_t start, size_t end, double eta) {
+void update_mini_batch(neural_network_t *nn, size_t start, size_t end, double eta) {
+	if (!nn || !nn->biases || !nn->weights || list_len(nn->biases) != list_len(nn->weights)) return;
+	list_t *nabla_b, *nabla_w, *nabla_b_tmp, *nabla_w_tmp;
+	list_init(&nabla_b, list_len(nn->biases), NULL);
+	list_init(&nabla_w, list_len(nn->weights), NULL);
+	list_init(&nabla_b_tmp, list_len(nn->biases), NULL);
+	list_init(&nabla_w_tmp, list_len(nn->weights), NULL);
+
+	for (size_t i = 0; i < list_len(nn->biases); i++) {
+		matrix_t *mb, *mw;
+		matrix_zero_init(&mb, matrix_num_rows(list_get(nn->biases, i)), matrix_num_cols(list_get(nn->biases, i)));
+		matrix_zero_init(&mw, matrix_num_rows(list_get(nn->weights, i)), matrix_num_cols(list_get(nn->weights, i)));
+		list_set(nabla_b, i, mb);
+		list_set(nabla_w, i, mw);
+	}
+
+	for (size_t i = start; i < end; i++) {
+		matrix_t *x = list_get(nn->training_data, i);
+		matrix_t *y = list_get(nn->training_results, i);
+		list_t *delta_nabla_b, *delta_nabla_w;
+		backprop(nn, x, y, &delta_nabla_b, &delta_nabla_w);
+
+		for (size_t j = 0; j < list_len(nabla_b); j++) {
+			matrix_t *nbsum, *wbsum;
+
+			matrix_t *nb = list_get(nabla_b, j);
+			matrix_t *dnb = list_get(delta_nabla_b, j);
+			matrix_sum(nb, dnb, &nbsum);
+			list_set(nabla_b_tmp, j, nbsum);
+
+			matrix_t *wb = list_get(nabla_w, j);
+			matrix_t *dwb = list_get(delta_nabla_w, j);
+			matrix_sum(wb, dwb, &wbsum);
+			list_set(nabla_w_tmp, j, wbsum);
+		}
+
+		list_free(nabla_b, (free_fp)matrix_free);
+		list_free(nabla_w, (free_fp)matrix_free);
+		nabla_b = nabla_b_tmp;
+		nabla_w = nabla_w_tmp;
+	}
+
+
+}
+
+void backprop(neural_network_t *nn, matrix_t *x, matrix_t *y, list_t **nabla_b, list_t **nabla_w) {
 
 }
 
@@ -134,15 +183,15 @@ int main() {
 	get_images(TRAIN_IMAGES_FILENAME, num_train_images, num_rows, num_cols, num_validation, &w->training_data, &w->validation_data);
 	get_images(TEST_IMAGES_FILENAME, num_test_images, num_rows, num_cols, 0, &w->test_data, NULL);
 	printf("We got the images (%lu)(%lu)(%lu)...\n", list_len(w->training_data), list_len(w->validation_data), list_len(w->test_data));
-	get_labels(TRAIN_LABELS_FILENAME, num_train_labels, num_validation, &w->training_labels, &w->validation_labels);
-	get_labels(TEST_LABELS_FILENAME, num_test_labels, 0, &w->test_labels, NULL);
-	printf("We got the labels (%lu)(%lu)(%lu)...\n", list_len(w->training_labels), list_len(w->validation_labels), list_len(w->test_labels));
+	get_labels(TRAIN_LABELS_FILENAME, num_train_labels, num_validation, &w->training_results, &w->validation_results);
+	get_labels(TEST_LABELS_FILENAME, num_test_labels, 0, &w->test_results, NULL);
+	printf("We got the labels (%lu)(%lu)(%lu)...\n", list_len(w->training_results), list_len(w->validation_results), list_len(w->test_results));
 
 	size_t wes = 43432;
 	matrix_t *m = list_get(w->training_data, wes);
 	printf("Lets print training matrix (%lu)(%s)\n", wes, m ? "GOOD" : "BAD");
 //	matrix_print(m, 8, 1);
-	m = list_get(w->training_labels, wes);
+	m = list_get(w->training_results, wes);
 	printf("Lets print training label (%lu)(%s)\n", wes, m ? "GOOD" : "BAD");
 	matrix_print(m, 8, 1);
 
@@ -150,7 +199,7 @@ int main() {
 	m = list_get(w->validation_data, wes);
 	printf("Lets print validation matrix (%lu)(%s)\n", wes, m ? "GOOD" : "BAD");
 //	matrix_print(m, 8, 1);
-	m = list_get(w->validation_labels, wes);
+	m = list_get(w->validation_results, wes);
 	printf("Lets print validation label (%lu)(%s)\n", wes, m ? "GOOD" : "BAD");
 	matrix_print(m, 8, 1);
 
@@ -158,7 +207,7 @@ int main() {
 	m = list_get(w->test_data, wes);
 	printf("Lets print test matrix (%lu)(%s)\n", wes, m ? "GOOD" : "BAD");
 	matrix_print(m, 8, 1);
-	m = list_get(w->test_labels, wes);
+	m = list_get(w->test_results, wes);
 	printf("Lets print test label (%lu)(%s)\n", wes, m ? "GOOD" : "BAD");
 	matrix_print(m, 8, 1);
 

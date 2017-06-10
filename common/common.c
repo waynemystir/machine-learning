@@ -73,6 +73,18 @@ void list_shuffle(list_t *lst) {
 		list_swap(lst, rand() % lst->count, last_index);
 }
 
+void list_free(list_t *lst, free_fp ffp) {
+	if (!lst) return;
+
+	if (lst->data) {
+		for (int i = 0; i < lst->count; i++)
+			if (ffp) ffp(lst->data[i]);
+			else free(lst->data[i]);
+		free(lst->data);
+	}
+	free(lst);
+}
+
 void linked_list_add_head(linked_list_t *list, void *data, linked_list_node_t **new_node) {
 	if (!list || !data) return;
 

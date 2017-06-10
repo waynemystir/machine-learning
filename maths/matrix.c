@@ -123,3 +123,14 @@ void matrix_print(matrix_t *m, int precision, int zero_precision) {
 	}
 	printf("\n");
 }
+
+void matrix_free(matrix_t *m) {
+	if (!m) return;
+	if (m->data) {
+		for (size_t i = 0; i < m->num_rows; i++)
+			free(m->data[i]);
+		free(m->data);
+	}
+	free(m);
+}
+

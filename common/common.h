@@ -10,12 +10,15 @@ typedef struct linked_list_node {
 
 typedef struct linked_list linked_list_t;
 
+typedef void (*free_fp)(void *type);
+
 void list_init(list_t **lst, size_t count, void **data);
 size_t list_len(list_t *lst);
 void *list_get(list_t *lst, size_t index);
 void list_set(list_t *lst, size_t index, void *value);
 void list_swap(list_t *lst, size_t i, size_t j);
 void list_shuffle(list_t *lst);
+void list_free(list_t *lst, free_fp ffp);
 
 void linked_list_add_head(linked_list_t *list, void *data, linked_list_node_t **new_node);
 void linked_list_add_tail(linked_list_t *list, void *data, linked_list_node_t **new_node);
