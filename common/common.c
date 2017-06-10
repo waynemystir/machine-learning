@@ -6,8 +6,9 @@
 #include "common.h"
 
 struct list {
-	size_t count;
 	void **data;
+	size_t count;
+	free_fp ffp;
 };
 
 struct linked_list {
@@ -16,10 +17,11 @@ struct linked_list {
 	size_t count;
 };
 
-void list_init(list_t **lst, size_t count, void **data) {
+void list_init(list_t **lst, size_t count, void **data, free_fp ffp) {
 	list_t *l = malloc(SZ_LIST);
 	memset(l, '\0', SZ_LIST);
 	l->count = count;
+	l->ffp = ffp;
 	if (lst) *lst = l;
 	if (data) {
 		l->data = data;
@@ -44,6 +46,8 @@ void list_set(list_t *lst, size_t index, void *value) {
 	if (!lst || !lst->data || lst->count <= index)
 		return;
 
+	if (lst->ffp) lst->ffp(lst->data[index]);
+	else free(lst->data[index]);
 	lst->data[index] = value;
 }
 
@@ -73,12 +77,12 @@ void list_shuffle(list_t *lst) {
 		list_swap(lst, rand() % lst->count, last_index);
 }
 
-void list_free(list_t *lst, free_fp ffp) {
+void list_free(list_t *lst) {
 	if (!lst) return;
 
 	if (lst->data) {
 		for (int i = 0; i < lst->count; i++)
-			if (ffp) ffp(lst->data[i]);
+			if (lst->ffp) lst->ffp(lst->data[i]);
 			else free(lst->data[i]);
 		free(lst->data);
 	}

@@ -104,12 +104,12 @@ int get_images(char *filename,
 
 	size_t num_train_pixels = num_images - num_validation_pixels;
 	list_t *tr_pxs, *vd_pxs = NULL;
-	list_init(&tr_pxs, num_train_pixels, NULL);
+	list_init(&tr_pxs, num_train_pixels, NULL, (free_fp)matrix_free);
 	if (!tr_pxs) return -1;
 	if (train_pixels) *train_pixels = tr_pxs;
 
 	if (num_validation_pixels > 0 && validation_pixels) {
-		list_init(&vd_pxs, num_validation_pixels, NULL);
+		list_init(&vd_pxs, num_validation_pixels, NULL, (free_fp)matrix_free);
 		if (!vd_pxs) return -1;
 		*validation_pixels = vd_pxs;
 	}
@@ -162,12 +162,12 @@ int get_labels(char *filename,
 
 	size_t num_train_labels = num_labels - num_validation_labels;
 	list_t *tr_lbs, *vd_lbs = NULL;
-	list_init(&tr_lbs, num_train_labels, NULL);
+	list_init(&tr_lbs, num_train_labels, NULL, (free_fp)matrix_free);
 	if (!tr_lbs) return -1;
 	if (train_labels) *train_labels = tr_lbs;
 
 	if (num_validation_labels > 0 && validation_labels) {
-		list_init(&vd_lbs, num_validation_labels, NULL);
+		list_init(&vd_lbs, num_validation_labels, NULL, (free_fp)matrix_free);
 		if (!vd_lbs) return -1;
 		*validation_labels = vd_lbs;
 	}

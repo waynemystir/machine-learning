@@ -31,8 +31,8 @@ void neural_net_init(neural_network_t **neural_net, int num_neurons[3]) {
 	*neural_net = nn;
 	memcpy(nn->num_neurons, num_neurons, 3 * sizeof(int));
 
-	list_init(&nn->weights, NUMBER_OF_LAYERS - 1, NULL);
-	list_init(&nn->biases, NUMBER_OF_LAYERS - 1, NULL);
+	list_init(&nn->weights, NUMBER_OF_LAYERS - 1, NULL, (free_fp)matrix_free);
+	list_init(&nn->biases, NUMBER_OF_LAYERS - 1, NULL, (free_fp)matrix_free);
 
 	matrix_t *wts1, *wts2, *bias1, *bias2;
 
@@ -94,12 +94,10 @@ void sgd(neural_network_t *nn, size_t epochs, size_t mini_batch_size, double eta
 }
 
 void update_mini_batch(neural_network_t *nn, size_t start, size_t end, double eta) {
-	if (!nn || !nn->biases || !nn->weights || list_len(nn->biases) != list_len(nn->weights)) return;
-	list_t *nabla_b, *nabla_w, *nabla_b_tmp, *nabla_w_tmp;
-	list_init(&nabla_b, list_len(nn->biases), NULL);
-	list_init(&nabla_w, list_len(nn->weights), NULL);
-	list_init(&nabla_b_tmp, list_len(nn->biases), NULL);
-	list_init(&nabla_w_tmp, list_len(nn->weights), NULL);
+	if (start >= end || !nn || !nn->biases || !nn->weights || list_len(nn->biases) != list_len(nn->weights)) return;
+	list_t *nabla_b, *nabla_w;
+	list_init(&nabla_b, list_len(nn->biases), NULL, (free_fp)matrix_free);
+	list_init(&nabla_w, list_len(nn->weights), NULL, (free_fp)matrix_free);
 
 	for (size_t i = 0; i < list_len(nn->biases); i++) {
 		matrix_t *mb, *mw;
@@ -121,21 +119,31 @@ void update_mini_batch(neural_network_t *nn, size_t start, size_t end, double et
 			matrix_t *nb = list_get(nabla_b, j);
 			matrix_t *dnb = list_get(delta_nabla_b, j);
 			matrix_sum(nb, dnb, &nbsum);
-			list_set(nabla_b_tmp, j, nbsum);
+			list_set(nabla_b, j, nbsum);
 
 			matrix_t *wb = list_get(nabla_w, j);
 			matrix_t *dwb = list_get(delta_nabla_w, j);
 			matrix_sum(wb, dwb, &wbsum);
-			list_set(nabla_w_tmp, j, wbsum);
+			list_set(nabla_w, j, wbsum);
 		}
-
-		list_free(nabla_b, (free_fp)matrix_free);
-		list_free(nabla_w, (free_fp)matrix_free);
-		nabla_b = nabla_b_tmp;
-		nabla_w = nabla_w_tmp;
 	}
 
+	for (size_t i = 0; i < list_len(nn->biases); i++) {
+		matrix_t *sw, *sb;
+		matrix_t *w = list_get(nn->weights, i);
+		matrix_t *nw = list_get(nabla_w, i);
+		matrix_t *b = list_get(nn->biases, i);
+		matrix_t *nb = list_get(nabla_b, i);
+		double scalar = eta * (start - end);
 
+		matrix_product_scalar(nw, scalar);
+		matrix_product_scalar(nb, scalar);
+		matrix_sum(w, nw, &sw);
+		matrix_sum(b, nb, &sb);
+
+		list_set(nn->weights, i, sw);
+		list_set(nn->biases, i, sb);
+	}
 }
 
 void backprop(neural_network_t *nn, matrix_t *x, matrix_t *y, list_t **nabla_b, list_t **nabla_w) {

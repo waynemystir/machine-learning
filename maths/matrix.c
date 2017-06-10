@@ -73,6 +73,14 @@ void matrix_product(matrix_t *m1, matrix_t *m2, matrix_t **product) {
 		}
 }
 
+void matrix_product_scalar(matrix_t *m, double scalar) {
+	if (!m) return;
+
+	for (int i = 0; i < m->num_rows; i++)
+		for (int j = 0; j < m->num_cols; j++)
+			matrix_set(m, i, j, scalar * matrix_get(m, i, j));
+}
+
 void matrix_sum(matrix_t *m1, matrix_t *m2, matrix_t **sum) {
 	if (!m1 || !m2 || m1->num_rows != m2->num_rows || m1->num_cols != m2->num_cols)
 		return;
