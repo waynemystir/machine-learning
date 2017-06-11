@@ -46,8 +46,8 @@ void list_set(list_t *lst, size_t index, void *value) {
 	if (!lst || !lst->data || lst->count <= index)
 		return;
 
-	if (lst->ffp) lst->ffp(lst->data[index]);
-	else free(lst->data[index]);
+//	if (lst->ffp) lst->ffp(lst->data[index]);
+//	else free(lst->data[index]);
 	lst->data[index] = value;
 }
 

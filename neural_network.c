@@ -53,26 +53,15 @@ void neural_net_init(neural_network_t **neural_net, int num_neurons[3]) {
 	matrix_elementwise_func_3(bias2, gaussrand);
 }
 
-void sigmoid(double z, double *ret_value) {
-	*ret_value = 1 / (1 + exp(-z));
-//	*ret_value = 10 + z;
-}
-
-void sigmoid_arr(double *arr, size_t num, double **ret_array) {
-	double *ret_arr = calloc(num, sizeof(double));
-	double *iter = ret_arr;
-	for (int i = 0; i < num; i++)
-		sigmoid(arr[i], iter++);
-	*ret_array = ret_arr;
-}
+double sigmoid(double z) { return 1 / (1 + exp(-z)); }
 
 void feedforward(neural_network_t *nn, matrix_t *a, matrix_t **output) {
+	if (!nn || !nn->biases || !nn->weights || list_len(nn->biases) != list_len(nn->weights)) return;
 	matrix_t *mp, *ms;
-	for (int i = 0; i < NUMBER_OF_LAYERS - 1; i++) {
+	for (int i = 0; i < list_len(nn->biases); i++) {
 		matrix_product(list_get(nn->weights, i), a, &mp);
 		matrix_sum(mp, list_get(nn->biases, i), &ms);
-		matrix_elementwise_func_2(ms, sigmoid);
-		a = ms;
+		a = matrix_elementwise_func_4_ret(ms, sigmoid);
 		mp = NULL;
 		ms = NULL;
 	}
@@ -87,7 +76,7 @@ void sgd(neural_network_t *nn, size_t epochs, size_t mini_batch_size, double eta
 		for (size_t j = 0; j < list_len(nn->training_data); j+= mini_batch_size)
 			update_mini_batch(nn, j, j + mini_batch_size, eta);
 		if (nn->test_data)
-			printf("Epoch (%lu): (%lu) / (%lu) \n", i + 1, evaluate(nn->test_data), list_len(nn->test_data));
+			printf("Epoch (%lu): (%lu) / (%lu) \n", i + 1, evaluate(nn), list_len(nn->test_data));
 		else
 			printf("Epoch (%lu) complete\n", i + 1);
 	}
@@ -147,15 +136,65 @@ void update_mini_batch(neural_network_t *nn, size_t start, size_t end, double et
 }
 
 void backprop(neural_network_t *nn, matrix_t *x, matrix_t *y, list_t **nabla_b, list_t **nabla_w) {
+	if (!nn || !nn->biases || !nn->weights || list_len(nn->biases) != list_len(nn->weights)) return;
+	list_t *nabla_bb, *nabla_ww;
+	list_init(&nabla_bb, list_len(nn->biases), NULL, (free_fp)matrix_free);
+	list_init(&nabla_ww, list_len(nn->weights), NULL, (free_fp)matrix_free);
+	if (nabla_b) *nabla_b = nabla_bb;
+	if (nabla_w) *nabla_w = nabla_ww;
 
+	for (size_t i = 0; i < list_len(nn->biases); i++) {
+		matrix_t *mb, *mw;
+		matrix_zero_init(&mb, matrix_num_rows(list_get(nn->biases, i)), matrix_num_cols(list_get(nn->biases, i)));
+		matrix_zero_init(&mw, matrix_num_rows(list_get(nn->weights, i)), matrix_num_cols(list_get(nn->weights, i)));
+		list_set(nabla_bb, i, mb);
+		list_set(nabla_ww, i, mw);
+	}
+
+	matrix_t *activation = x;
+	list_t *activations, *zs;
+	list_init(&activations, 1 + list_len(nn->biases), NULL, (free_fp)matrix_free);
+	list_init(&zs, list_len(nn->biases), NULL, (free_fp)matrix_free);
+	list_set(activations, 0, x);
+
+	for (size_t i = 0; i < list_len(nn->biases); i++) {
+		matrix_t *b = list_get(nn->biases, i);
+		matrix_t *w = list_get(nn->weights, i);
+		matrix_t *p, *z;
+		matrix_product(w, activation, &p);
+		matrix_sum(p, b, &z);
+		list_set(zs, i, z);
+		activation = matrix_elementwise_func_4_ret(z, sigmoid);
+		list_set(activations, 1 + i, activation);
+	}
 }
 
-size_t evaluate(list_t *test_data) {
-	return 1;
+size_t evaluate(neural_network_t *nn) {
+	if (!nn || !nn->test_data || !nn->test_results || list_len(nn->test_data) != list_len(nn->test_results)) return 0;
+
+	size_t correct = 0, ffr = 0, ffc = 0, yr = 0, yc = 0;
+	double ffm = -1, ym = -1;
+	for (size_t i = 0; i < list_len(nn->test_data); i++) {
+		matrix_t *x = list_get(nn->test_data, i);
+		matrix_t *y = list_get(nn->test_results, i);
+		matrix_t *ffout;
+		feedforward(nn, x, &ffout);
+		ffm = matrix_argmax(ffout, &ffr, &ffc);
+		ym = matrix_argmax(y, &yr, &yc);
+		printf("XXXXX (%lu)(%lu):\n", matrix_num_rows(x), matrix_num_cols(x));
+//		matrix_print(x, 3, 0);
+		printf("FFOUT (%lu)(%lu)ffr(%lu)ffc(%lu)ffm(%.3f):\n", matrix_num_rows(ffout), matrix_num_cols(ffout), 1+ffr, 1+ffc, ffm);
+		matrix_print(ffout, 3, 0);
+		printf("YYYYY (%lu)(%lu)yr(%lu)yc(%lu)ym(%.3f):\n", matrix_num_rows(y), matrix_num_cols(y), 1+yr, 1+yc, ym);
+		matrix_print(y, 0, 0);
+		if (ffr == yr && ffc == yc) correct++;
+	}
+
+	return correct;
 }
 
-int main() {
-	printf("network-0 (%lu)(%lu)(%lu)\n", sizeof(unsigned int), sizeof(uint32_t), sizeof(double));
+int run_mnist() {
+	printf("run_mnist-0\n");
 
 	uint32_t magic_number_images, magic_number_labels, num_train_images, num_train_labels, num_test_images, num_test_labels, num_rows, num_cols;
 	int rih = images_header(TRAIN_IMAGES_FILENAME, &magic_number_images, &num_train_images, &num_rows, &num_cols);
@@ -220,11 +259,82 @@ int main() {
 	matrix_print(m, 8, 1);
 
 //	printf("XXXXX (%f)(%f)(%f)(%f)\n", exp(-6), sigmoid(6), exp(6), sigmoid(-6));
-
-	double arr[4] = { -4, 8, 13, 31 };
-	double *ra;
-	sigmoid_arr(arr, 4, &ra);
-	for (int j = 0; j < 4; j++) printf("DDD (%d)(%f)\n", j, ra[j]);
+//
+//	double arr[4] = { -4, 8, 13, 31 };
+//	double *ra;
+//	sigmoid_arr(arr, 4, &ra);
+//	for (int j = 0; j < 4; j++) printf("DDD (%d)(%f)\n", j, ra[j]);
 
 	return 0;
+}
+
+int run_dummy() {
+	size_t epochs = 3;
+	double eta = 3.0;
+	size_t num_neurs_1 = 784;
+	size_t num_neurs_2 = 13;
+	size_t num_neurs_3 = 4;
+	printf("run_dummy (%lu)(%lu)(%lu)\n", num_neurs_1, num_neurs_2, num_neurs_3);
+	size_t num_trd = 90;
+	size_t num_vdd = 10;
+	size_t num_ttd = 2;
+
+	neural_network_t *nn;
+	int sizes[] = {num_neurs_1, num_neurs_2, num_neurs_3};
+	neural_net_init(&nn, sizes);
+	list_init(&nn->training_data, num_trd, NULL, (free_fp)matrix_free);
+	list_init(&nn->training_results, num_trd, NULL, (free_fp)matrix_free);
+	list_init(&nn->validation_data, num_vdd, NULL, (free_fp)matrix_free);
+	list_init(&nn->validation_results, num_vdd, NULL, (free_fp)matrix_free);
+	list_init(&nn->test_data, num_ttd, NULL, (free_fp)matrix_free);
+	list_init(&nn->test_results, num_ttd, NULL, (free_fp)matrix_free);
+
+	for (size_t i = 0; i < num_trd; i++) {
+		matrix_t *m, *mr;
+		matrix_init(&m, num_neurs_1, 1, NULL);
+		matrix_init(&mr, num_neurs_3, 1, NULL);
+		for (int j = 0; j < num_neurs_1; j++)
+			matrix_set(m, j, 0, gaussrand_0to1());
+		int resval = mrand(num_neurs_3);
+		for (int j = 0; j < num_neurs_3; j++)
+			matrix_set(mr, j, 0, resval == j ? 1 : 0);
+		list_set(nn->training_data, i, m);
+		list_set(nn->training_results, i, mr);
+	}
+
+	for (size_t i = 0; i < num_vdd; i++) {
+		matrix_t *m, *mr;
+		matrix_init(&m, num_neurs_1, 1, NULL);
+		matrix_init(&mr, num_neurs_3, 1, NULL);
+		for (int j = 0; j < num_neurs_1; j++)
+			matrix_set(m, j, 0, gaussrand_0to1());
+		int resval = mrand(num_neurs_3);
+		for (int j = 0; j < num_neurs_3; j++)
+			matrix_set(mr, j, 0, resval == j ? 1 : 0);
+		list_set(nn->validation_data, i, m);
+		list_set(nn->validation_results, i, mr);
+	}
+
+	for (size_t i = 0; i < num_ttd; i++) {
+		matrix_t *m, *mr;
+		matrix_init(&m, num_neurs_1, 1, NULL);
+		matrix_init(&mr, num_neurs_3, 1, NULL);
+		for (int j = 0; j < num_neurs_1; j++)
+			matrix_set(m, j, 0, gaussrand_0to1());
+		int resval = mrand(num_neurs_3);
+		for (int j = 0; j < num_neurs_3; j++)
+			matrix_set(mr, j, 0, resval == j ? 1 : 0);
+		list_set(nn->test_data, i, m);
+		list_set(nn->test_results, i, mr);
+	}
+
+	sgd(nn, epochs, 10, eta);
+
+	return 0;
+}
+
+int main() {
+	printf("network-0 (%lu)(%lu)(%lu)\n", sizeof(unsigned int), sizeof(uint32_t), sizeof(double));
+//	run_mnist();
+	run_dummy();
 }

@@ -91,7 +91,7 @@ void matrix_sum(matrix_t *m1, matrix_t *m2, matrix_t **sum) {
 }
 
 void matrix_elementwise_func_1(matrix_t *m, elementwise_function_1 ef) {
-	if (!m || !m->data)
+	if (!m || !m->data || !ef)
 		return;
 
 	for (int i = 0; i < m->num_rows; i++)
@@ -100,7 +100,7 @@ void matrix_elementwise_func_1(matrix_t *m, elementwise_function_1 ef) {
 }
 
 void matrix_elementwise_func_2(matrix_t *m, elementwise_function_2 ef) {
-	if (!m || !m->data)
+	if (!m || !m->data || !ef)
 		return;
 
 	for (int i = 0; i < m->num_rows; i++)
@@ -109,12 +109,46 @@ void matrix_elementwise_func_2(matrix_t *m, elementwise_function_2 ef) {
 }
 
 void matrix_elementwise_func_3(matrix_t *m, elementwise_function_3 ef) {
-	if (!m || !m->data)
+	if (!m || !m->data || !ef)
 		return;
 
 	for (int i = 0; i < m->num_rows; i++)
 		for (int j = 0; j < m->num_cols; j++)
 			matrix_set(m, i, j, ef());
+}
+
+void matrix_elementwise_func_4(matrix_t *m, elementwise_function_4 ef) {
+	if (!m || !m->data || !ef)
+		return;
+
+	for (int i = 0; i < m->num_rows; i++)
+		for (int j = 0; j < m->num_cols; j++)
+			matrix_set(m, i, j, ef(matrix_get(m, i, j)));
+}
+
+matrix_t *matrix_elementwise_func_4_ret(matrix_t *m, elementwise_function_4 ef) {
+	if (!m || !ef) return NULL;
+
+	matrix_t *mret;
+	matrix_init(&mret, m->num_rows, m->num_cols, NULL);
+	for (int i = 0; i < m->num_rows; i++)
+		for (int j = 0; j < m->num_cols; j++)
+			matrix_set(mret, i, j, ef(matrix_get(m, i, j)));
+	return mret;
+}
+
+double matrix_argmax(matrix_t *m, size_t *row, size_t *col) {
+	if (!m) return -DBL_MAX;
+
+	double max = matrix_get(m, 0, 0);
+	for (size_t i = 0; i < m->num_rows; i++)
+		for (size_t j = 0; j < m->num_cols; j++)
+			if (max < matrix_get(m, i, j)) {
+				max = matrix_get(m, i, j);
+				*row = i;
+				*col = j;
+			}
+	return max;
 }
 
 void matrix_print(matrix_t *m, int precision, int zero_precision) {

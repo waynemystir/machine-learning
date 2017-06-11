@@ -20,6 +20,8 @@ void matrix_elementwise_func_1(matrix_t *m, elementwise_function_1 ef);
 void matrix_elementwise_func_2(matrix_t *m, elementwise_function_2 ef);
 void matrix_elementwise_func_3(matrix_t *m, elementwise_function_3 ef);
 void matrix_elementwise_func_4(matrix_t *m, elementwise_function_4 ef);
+matrix_t *matrix_elementwise_func_4_ret(matrix_t *m, elementwise_function_4 ef);
+double matrix_argmax(matrix_t *m, size_t *row, size_t *col);
 void matrix_print(matrix_t *m, int precision, int zero_precision);
 void matrix_free(matrix_t *m);
 
