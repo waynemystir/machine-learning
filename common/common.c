@@ -45,10 +45,17 @@ void *list_get(list_t *lst, size_t index) {
 void list_set(list_t *lst, size_t index, void *value) {
 	if (!lst || !lst->data || lst->count <= index)
 		return;
-
-//	if (lst->ffp) lst->ffp(lst->data[index]);
-//	else free(lst->data[index]);
+	if (lst->ffp) lst->ffp(lst->data[index]);
+	else free(lst->data[index]);
 	lst->data[index] = value;
+}
+
+void *list_set_get_existing(list_t *lst, size_t index, void *value) {
+	if (!lst || !lst->data || lst->count <= index)
+		return NULL;
+	void *existing = lst->data[index];
+	lst->data[index] = value;
+	return existing;
 }
 
 void list_swap(list_t *lst, size_t i, size_t j) {
@@ -57,8 +64,8 @@ void list_swap(list_t *lst, size_t i, size_t j) {
 
 	void *wi = list_get(lst, i);
 	void *wj = list_get(lst, j);
-	list_set(lst, i, wj);
-	list_set(lst, j, wi);
+	list_set_get_existing(lst, i, wj);
+	list_set_get_existing(lst, j, wi);
 }
 
 void list_shuffle(list_t *lst) {

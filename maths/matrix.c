@@ -81,6 +81,19 @@ void matrix_product_scalar(matrix_t *m, double scalar) {
 			matrix_set(m, i, j, scalar * matrix_get(m, i, j));
 }
 
+matrix_t *matrix_product_scalar_ret(matrix_t *m, double scalar) {
+	if (!m) return NULL;
+
+	matrix_t *ms;
+	matrix_init(&ms, m->num_rows, m->num_cols, NULL);
+
+	for (int i = 0; i < m->num_rows; i++)
+		for (int j = 0; j < m->num_cols; j++)
+			matrix_set(ms, i, j, scalar * matrix_get(m, i, j));
+
+	return ms;
+}
+
 void matrix_sum(matrix_t *m1, matrix_t *m2, matrix_t **sum) {
 	if (!m1 || !m2 || m1->num_rows != m2->num_rows || m1->num_cols != m2->num_cols)
 		return;
@@ -135,6 +148,18 @@ matrix_t *matrix_elementwise_func_4_ret(matrix_t *m, elementwise_function_4 ef) 
 		for (int j = 0; j < m->num_cols; j++)
 			matrix_set(mret, i, j, ef(matrix_get(m, i, j)));
 	return mret;
+}
+
+matrix_t *matrix_transpose(matrix_t *m) {
+	if (!m) return NULL;
+
+	matrix_t *t;
+	matrix_init(&t, m->num_cols, m->num_rows, NULL);
+	for (int i = 0; i < t->num_rows; i++)
+		for (int j = 0; j < t->num_cols; j++)
+			matrix_set(t, i, j, matrix_get(m, j, i));
+
+	return t;
 }
 
 double matrix_argmax(matrix_t *m, size_t *row, size_t *col) {
