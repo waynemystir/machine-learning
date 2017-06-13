@@ -6,6 +6,8 @@
 
 #include "common.h"
 
+static ENVIRONMENT environment = ENV_PROD;
+
 struct list {
 	void **data;
 	size_t count;
@@ -184,21 +186,55 @@ void linked_list_split(linked_list_t *list, size_t index, linked_list_t **new_li
 	free(list);
 }
 
-int mllog(const char *fmt, ...) {
+void set_environment(ENVIRONMENT env) {
+	environment = env;
+}
+
+void set_environment_from_str(char *env_str) {
+	if (strcmp(env_str, "dev") == 0)
+		return set_environment(ENV_DEV);
+
+	if (strcmp(env_str, "prod") == 0)
+		return set_environment(ENV_PROD);
+
+	printf("Invalid environment name given (%s)\n", env_str);
+	exit(1);
+}
+
+ENVIRONMENT get_environment() {
+	return environment;
+}
+
+char *get_environment_as_str() {
+	switch (environment) {
+		case ENV_DEV: return "ENV_DEV";
+		case ENV_PROD: return "ENV_PROD";
+		default: return "ENV_UNKNOWN";
+	}
+}
+
+int mllog(LOG_LEVEL ll, int with_time, const char *fmt, ...) {
+	if (environment == ENV_PROD && ll < LOG_LEVEL_WARNING)
+		return 0;
+
 	int ret;
 	size_t len = strlen(fmt);
 	char wes[len + 256];
 	memset(wes, '\0', len + 256);
-	char time_text_delimit[] = "*";
 
-	time_t rawtime;
-	struct tm * timeinfo;
+	if (with_time) {
+		char time_text_delimit[] = "*";
 
-	time ( &rawtime );
-	timeinfo = localtime ( &rawtime );
-	sprintf(wes, "%s%s ", asctime (timeinfo), time_text_delimit);
-	wes[strlen(wes) - strlen(time_text_delimit) - 2] = ' ';
-	strcat(wes, fmt);
+		time_t rawtime;
+		struct tm * timeinfo;
+
+		time ( &rawtime );
+		timeinfo = localtime ( &rawtime );
+		sprintf(wes, "%s%s ", asctime (timeinfo), time_text_delimit);
+		wes[strlen(wes) - strlen(time_text_delimit) - 2] = ' ';
+		strcat(wes, fmt);
+	} else
+		strcpy(wes, fmt);
 
 	/* Declare a va_list type variable */
 	va_list myargs;

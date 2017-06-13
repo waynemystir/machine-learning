@@ -17,6 +17,19 @@ typedef struct linked_list linked_list_t;
 
 typedef void (*free_fp)(void *type);
 
+typedef enum ENVIRONMENT {
+	ENV_DEV = 0,
+	ENV_PROD = 1,
+} ENVIRONMENT;
+
+typedef enum LOG_LEVEL {
+	LOG_LEVEL_ALL = 0,
+	LOG_LEVEL_DEBUG = 1,
+	LOG_LEVEL_INFO = 2,
+	LOG_LEVEL_WARNING = 3,
+	LOG_LEVEL_HIGH = 4,
+} LOG_LEVEL;
+
 void list_init(list_t **lst, size_t count, void **data, free_fp ffp);
 size_t list_len(list_t *lst);
 void *list_get(list_t *lst, long index);
@@ -31,7 +44,11 @@ void linked_list_add_tail(linked_list_t *list, void *data, linked_list_node_t **
 linked_list_node_t *linked_list_get(linked_list_t *list, size_t index);
 void linked_list_split(linked_list_t *list, size_t index, linked_list_t **new_list_1, linked_list_t **new_list_2);
 
-int mllog(const char *fmt, ...);
+void set_environment(ENVIRONMENT env);
+void set_environment_from_str(char *env_str);
+ENVIRONMENT get_environment();
+char *get_environment_as_str();
+int mllog(LOG_LEVEL ll, int with_time, const char *fmt, ...);
 
 #define SZ_LIST sizeof(list_t)
 #define SZ_LLND sizeof(linked_list_node_t)

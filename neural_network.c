@@ -89,7 +89,7 @@ void sgd(neural_network_t *nn, size_t epochs, size_t mini_batch_size, double eta
 	if (!nn || !nn->training_data) return;
 
 	if (mini_batch_size > list_len(nn->training_data)) {
-		printf("Invalid mini batch size (%lu). Please choose a size less "
+		mllog(LOG_LEVEL_HIGH, 1, "Invalid mini batch size (%lu). Please choose a size less "
 			"than the size of the training data (%lu).\n",
 			mini_batch_size, list_len(nn->training_data));
 		return;
@@ -100,9 +100,9 @@ void sgd(neural_network_t *nn, size_t epochs, size_t mini_batch_size, double eta
 		for (size_t j = 0; j < list_len(nn->training_data); j+= mini_batch_size)
 			update_mini_batch(nn, j, j + mini_batch_size, eta);
 		if (nn->test_data)
-			printf("%sEpoch (%lu): (%lu) / (%lu)%s\n", KRED, i + 1, evaluate(nn), list_len(nn->test_data), KNRM);
+			mllog(LOG_LEVEL_HIGH, 1, "%sEpoch (%lu): (%lu) / (%lu)%s\n", KRED, i + 1, evaluate(nn), list_len(nn->test_data), KNRM);
 		else
-			printf("%sEpoch (%lu) complete%s\n", KRED, i + 1, KNRM);
+			mllog(LOG_LEVEL_HIGH, 1, "%sEpoch (%lu) complete%s\n", KRED, i + 1, KNRM);
 	}
 }
 
@@ -188,8 +188,8 @@ void backprop(neural_network_t *nn, matrix_t *x, matrix_t *y, list_t **nabla_b, 
 		list_set(nabla_bb, i, mb);
 		list_set(nabla_ww, i, mw);
 	}
-	printf("x(%s)(%lu)(%lu)\n", x?"GGG":"BBB", matrix_num_rows(x), matrix_num_cols(x));
-	matrix_print(x, 2, 0);
+	mllog(LOG_LEVEL_DEBUG, 1, "x(%s)(%lu)(%lu)\n", x?"GGG":"BBB", matrix_num_rows(x), matrix_num_cols(x));
+	nn_matrix_print(LOG_LEVEL_DEBUG, x, 2, 0);
 
 	matrix_t *activation = x;
 	list_t *activations, *zs;
@@ -200,43 +200,43 @@ void backprop(neural_network_t *nn, matrix_t *x, matrix_t *y, list_t **nabla_b, 
 	for (size_t i = 0; i < list_len(nn->biases); i++) {
 		matrix_t *b = list_get(nn->biases, i);
 		matrix_t *w = list_get(nn->weights, i);
-		printf("w(%s)(%lu)(%lu)\n", w?"GGG":"BBB", matrix_num_rows(w), matrix_num_cols(w));
-		matrix_print(w, 2, 0);
-		printf("b(%s)(%lu)(%lu)\n", b?"GGG":"BBB", matrix_num_rows(b), matrix_num_cols(b));
-		matrix_print(b, 2, 0);
+		mllog(LOG_LEVEL_DEBUG, 1, "w(%s)(%lu)(%lu)\n", w?"GGG":"BBB", matrix_num_rows(w), matrix_num_cols(w));
+		nn_matrix_print(LOG_LEVEL_DEBUG, w, 2, 0);
+		mllog(LOG_LEVEL_DEBUG, 1, "b(%s)(%lu)(%lu)\n", b?"GGG":"BBB", matrix_num_rows(b), matrix_num_cols(b));
+		nn_matrix_print(LOG_LEVEL_DEBUG, b, 2, 0);
 		matrix_t *p, *z;
 		matrix_product(w, activation, &p);
 		matrix_sum(p, b, &z);
-		printf("z(%s)(%lu)(%lu)\n", z?"GGG":"BBB", matrix_num_rows(z), matrix_num_cols(z));
-		matrix_print(z, 2, 0);
+		mllog(LOG_LEVEL_DEBUG, 1, "z(%s)(%lu)(%lu)\n", z?"GGG":"BBB", matrix_num_rows(z), matrix_num_cols(z));
+		nn_matrix_print(LOG_LEVEL_DEBUG, z, 2, 0);
 		list_set(zs, i, z);
 		activation = matrix_elementwise_func_4_ret(z, sigmoid);
-		printf("sigmoid-z(%s)(%lu)(%lu)\n", activation?"GGG":"BBB", matrix_num_rows(activation), matrix_num_cols(activation));
-		matrix_print(activation, 2, 0);
+		mllog(LOG_LEVEL_DEBUG, 1, "sigmoid-z(%s)(%lu)(%lu)\n", activation?"GGG":"BBB", matrix_num_rows(activation), matrix_num_cols(activation));
+		nn_matrix_print(LOG_LEVEL_DEBUG, activation, 2, 0);
 		list_set(activations, 1 + i, activation);
 		matrix_free(p);
 	}
 
-	printf("activations-1(%s)(%lu)(%lu)\n", list_get(activations, -1)?"GGG":"BBB", matrix_num_rows(list_get(activations, -1)), matrix_num_cols(list_get(activations, -1)));
-	matrix_print(list_get(activations, -1), 2, 0);
-	printf("y(%s)(%lu)(%lu)\n", y?"GGG":"BBB", matrix_num_rows(y), matrix_num_cols(y));
-	matrix_print(y, 2, 0);
+	mllog(LOG_LEVEL_DEBUG, 1, "activations-1(%s)(%lu)(%lu)\n", list_get(activations, -1)?"GGG":"BBB", matrix_num_rows(list_get(activations, -1)), matrix_num_cols(list_get(activations, -1)));
+	nn_matrix_print(LOG_LEVEL_DEBUG, list_get(activations, -1), 2, 0);
+	mllog(LOG_LEVEL_DEBUG, 1, "y(%s)(%lu)(%lu)\n", y?"GGG":"BBB", matrix_num_rows(y), matrix_num_cols(y));
+	nn_matrix_print(LOG_LEVEL_DEBUG, y, 2, 0);
 	matrix_t *cost_deriv = NULL, *delta = NULL, *delta_tmp = NULL, *wwlast = NULL;
 	cost_derivative(list_get(activations, -1), y, &cost_deriv);
-	printf("cost_deriv(%s)(%lu)(%lu)\n", cost_deriv?"GGG":"BBB", matrix_num_rows(cost_deriv), matrix_num_cols(cost_deriv));
-	matrix_print(cost_deriv, 2, 0);
+	mllog(LOG_LEVEL_DEBUG, 1, "cost_deriv(%s)(%lu)(%lu)\n", cost_deriv?"GGG":"BBB", matrix_num_rows(cost_deriv), matrix_num_cols(cost_deriv));
+	nn_matrix_print(LOG_LEVEL_DEBUG, cost_deriv, 2, 0);
 	matrix_t *zw = list_get(zs, -1);
-	printf("zw(%s)(%lu)(%lu)\n", zw?"GGG":"BBB", matrix_num_rows(zw), matrix_num_cols(zw));
-	matrix_print(zw, 2, 0);
+	mllog(LOG_LEVEL_DEBUG, 1, "zw(%s)(%lu)(%lu)\n", zw?"GGG":"BBB", matrix_num_rows(zw), matrix_num_cols(zw));
+	nn_matrix_print(LOG_LEVEL_DEBUG, zw, 2, 0);
 	matrix_t *zsp = matrix_elementwise_func_4_ret(list_get(zs, -1), sigmoid_prime);
-	printf("zsp(%s)(%lu)(%lu)\n", zsp?"GGG":"BBB", matrix_num_rows(zsp), matrix_num_cols(zsp));
-	matrix_print(zsp, 2, 0);
+	mllog(LOG_LEVEL_DEBUG, 1, "zsp(%s)(%lu)(%lu)\n", zsp?"GGG":"BBB", matrix_num_rows(zsp), matrix_num_cols(zsp));
+	nn_matrix_print(LOG_LEVEL_DEBUG, zsp, 2, 0);
 	matrix_product_elementwise(cost_deriv, zsp, &delta);
 	matrix_free(zsp);
 	matrix_free(cost_deriv);
 	list_set(nabla_bb, list_len(nabla_bb) - 1, delta);
-	printf("delta(%s)(%lu)(%lu)\n", delta?"GGG":"BBB", matrix_num_rows(delta), matrix_num_cols(delta));
-	matrix_print(delta, 2, 0);
+	mllog(LOG_LEVEL_DEBUG, 1, "delta(%s)(%lu)(%lu)\n", delta?"GGG":"BBB", matrix_num_rows(delta), matrix_num_cols(delta));
+	nn_matrix_print(LOG_LEVEL_DEBUG, delta, 2, 0);
 	matrix_t *act_tr = matrix_transpose(list_get(activations, -2));
 	matrix_product(delta, act_tr, &wwlast);
 	matrix_free(act_tr);
@@ -276,17 +276,31 @@ size_t evaluate(neural_network_t *nn) {
 		feedforward(nn, x, &ffout);
 		ffm = matrix_argmax(ffout, &ffr, &ffc);
 		ym = matrix_argmax(y, &yr, &yc);
-		printf("XXXXX (%lu)(%lu):\n", matrix_num_rows(x), matrix_num_cols(x));
-//		matrix_print(x, 3, 0);
-		printf("FFOUT (%lu)(%lu)ffr(%lu)ffc(%lu)ffm(%.3f):\n", matrix_num_rows(ffout), matrix_num_cols(ffout), 1+ffr, 1+ffc, ffm);
-		matrix_print(ffout, 9, 0);
-		printf("YYYYY (%lu)(%lu)yr(%lu)yc(%lu)ym(%.3f):\n", matrix_num_rows(y), matrix_num_cols(y), 1+yr, 1+yc, ym);
-		matrix_print(y, 0, 0);
+		mllog(LOG_LEVEL_HIGH, 1, "XXXXX (%lu)(%lu):\n", matrix_num_rows(x), matrix_num_cols(x));
+//		nn_matrix_print(LOG_LEVEL_DEBUG, x, 3, 0);
+		mllog(LOG_LEVEL_HIGH, 1, "FFOUT (%lu)(%lu)ffr(%lu)ffc(%lu)ffm(%.3f):\n", matrix_num_rows(ffout), matrix_num_cols(ffout), 1+ffr, 1+ffc, ffm);
+		nn_matrix_print(LOG_LEVEL_DEBUG, ffout, 9, 0);
+		mllog(LOG_LEVEL_HIGH, 1, "YYYYY (%lu)(%lu)yr(%lu)yc(%lu)ym(%.3f):\n", matrix_num_rows(y), matrix_num_cols(y), 1+yr, 1+yc, ym);
+		nn_matrix_print(LOG_LEVEL_DEBUG, y, 0, 0);
 		if (ffr == yr && ffc == yc) correct++;
 		matrix_free(ffout);
 	}
 
 	return correct;
+}
+
+void nn_matrix_print(LOG_LEVEL LL, matrix_t *m, int precision, int zero_precision) {
+	switch (get_environment()) {
+		case ENV_DEV: {
+			matrix_print(m, precision, zero_precision);
+			break;
+		}
+		case ENV_PROD: {
+			if (LL >= LOG_LEVEL_INFO) matrix_print(m, precision, zero_precision);
+			break;
+		}
+		default: break;
+	}
 }
 
 int run_mnist() {
@@ -296,76 +310,76 @@ int run_mnist() {
 	size_t num_neurs_1 = 784;
 	size_t num_neurs_2 = 30;
 	size_t num_neurs_3 = 10;
-	printf("run_mnist epochs(%lu)mbs(%lu)eta(%.1f)(%lu)(%lu)(%lu)\n", epochs, mini_batch_size, eta, num_neurs_1, num_neurs_2, num_neurs_3);
+	mllog(LOG_LEVEL_HIGH, 1, "run_mnist epochs(%lu)mbs(%lu)eta(%.1f)(%lu)(%lu)(%lu)\n", epochs, mini_batch_size, eta, num_neurs_1, num_neurs_2, num_neurs_3);
 
 	uint32_t magic_number_images, magic_number_labels, num_train_images, num_train_labels, num_test_images, num_test_labels, num_rows, num_cols;
 	int rih = images_header(TRAIN_IMAGES_FILENAME, &magic_number_images, &num_train_images, &num_rows, &num_cols);
 	if (rih == -1) {
-		printf("There was a problem collecting training images.\n");
+		mllog(LOG_LEVEL_HIGH, 1, "There was a problem collecting training images.\n");
 		return -1;
 	}
 
 	rih = images_header(TEST_IMAGES_FILENAME, &magic_number_images, &num_test_images, &num_rows, &num_cols);
 	if (rih == -1) {
-		printf("There was a problem collecting test images.\n");
+		mllog(LOG_LEVEL_HIGH, 1, "There was a problem collecting test images.\n");
 		return -1;
 	}
 
 	rih = labels_header(TRAIN_LABELS_FILENAME, &magic_number_labels, &num_train_labels);
 	if (rih == -1) {
-		printf("There was a problem collecting training labels.\n");
+		mllog(LOG_LEVEL_HIGH, 1, "There was a problem collecting training labels.\n");
 		return -1;
 	}
 
 	rih = labels_header(TEST_LABELS_FILENAME, &magic_number_labels, &num_test_labels);
 	if (rih == -1) {
-		printf("There was a problem collecting testing labels.\n");
+		mllog(LOG_LEVEL_HIGH, 1, "There was a problem collecting testing labels.\n");
 		return -1;
 	}
 
 	neural_network_t *w;
 	int sizes[] = {num_neurs_1, num_neurs_2, num_neurs_3};
 	neural_net_init(&w, sizes);
-	for (int i = 0; i < 3; i++) printf("sz(%d)(%d)\n", i, w->num_neurons[i]);
+	for (int i = 0; i < 3; i++) mllog(LOG_LEVEL_HIGH, 1, "sz(%d)(%d)\n", i, w->num_neurons[i]);
 
 	size_t num_validation = 10 * 1000;
 	get_images(TRAIN_IMAGES_FILENAME, num_train_images, num_rows, num_cols, num_validation, &w->training_data, &w->validation_data);
 	get_images(TEST_IMAGES_FILENAME, num_test_images, num_rows, num_cols, 0, &w->test_data, NULL);
-	printf("We got the images (%lu)(%lu)(%lu)...\n", list_len(w->training_data), list_len(w->validation_data), list_len(w->test_data));
+	mllog(LOG_LEVEL_HIGH, 1, "We got the images (%lu)(%lu)(%lu)...\n", list_len(w->training_data), list_len(w->validation_data), list_len(w->test_data));
 	get_labels(TRAIN_LABELS_FILENAME, num_train_labels, num_validation, &w->training_results, &w->validation_results);
 	get_labels(TEST_LABELS_FILENAME, num_test_labels, 0, &w->test_results, NULL);
-	printf("We got the labels (%lu)(%lu)(%lu)...\n", list_len(w->training_results), list_len(w->validation_results), list_len(w->test_results));
+	mllog(LOG_LEVEL_HIGH, 1, "We got the labels (%lu)(%lu)(%lu)...\n", list_len(w->training_results), list_len(w->validation_results), list_len(w->test_results));
 
 	size_t wes = 43432;
 	matrix_t *m = list_get(w->training_data, wes);
-	printf("Lets print training matrix (%lu)(%s)\n", wes, m ? "GOOD" : "BAD");
-//	matrix_print(m, 8, 1);
+	mllog(LOG_LEVEL_DEBUG, 1, "Lets print training matrix (%lu)(%s)\n", wes, m ? "GOOD" : "BAD");
+//	nn_matrix_print(LOG_LEVEL_DEBUG, m, 8, 1);
 	m = list_get(w->training_results, wes);
-	printf("Lets print training label (%lu)(%s)\n", wes, m ? "GOOD" : "BAD");
-	matrix_print(m, 8, 1);
+	mllog(LOG_LEVEL_DEBUG, 1, "Lets print training label (%lu)(%s)\n", wes, m ? "GOOD" : "BAD");
+	nn_matrix_print(LOG_LEVEL_DEBUG, m, 8, 1);
 
 	wes = 7777;
 	m = list_get(w->validation_data, wes);
-	printf("Lets print validation matrix (%lu)(%s)\n", wes, m ? "GOOD" : "BAD");
-//	matrix_print(m, 8, 1);
+	mllog(LOG_LEVEL_DEBUG, 1, "Lets print validation matrix (%lu)(%s)\n", wes, m ? "GOOD" : "BAD");
+//	nn_matrix_print(LOG_LEVEL_DEBUG, m, 8, 1);
 	m = list_get(w->validation_results, wes);
-	printf("Lets print validation label (%lu)(%s)\n", wes, m ? "GOOD" : "BAD");
-	matrix_print(m, 8, 1);
+	mllog(LOG_LEVEL_DEBUG, 1, "Lets print validation label (%lu)(%s)\n", wes, m ? "GOOD" : "BAD");
+	nn_matrix_print(LOG_LEVEL_DEBUG, m, 8, 1);
 
 	wes = 6666;
 	m = list_get(w->test_data, wes);
-	printf("Lets print test matrix (%lu)(%s)\n", wes, m ? "GOOD" : "BAD");
-	matrix_print(m, 8, 1);
+	mllog(LOG_LEVEL_DEBUG, 1, "Lets print test matrix (%lu)(%s)\n", wes, m ? "GOOD" : "BAD");
+	nn_matrix_print(LOG_LEVEL_DEBUG, m, 8, 1);
 	m = list_get(w->test_results, wes);
-	printf("Lets print test label (%lu)(%s)\n", wes, m ? "GOOD" : "BAD");
-	matrix_print(m, 8, 1);
+	mllog(LOG_LEVEL_DEBUG, 1, "Lets print test label (%lu)(%s)\n", wes, m ? "GOOD" : "BAD");
+	nn_matrix_print(LOG_LEVEL_DEBUG, m, 8, 1);
 
-//	printf("XXXXX (%f)(%f)(%f)(%f)\n", exp(-6), sigmoid(6), exp(6), sigmoid(-6));
+//	mllog(LOG_LEVEL_DEBUG, 1, "XXXXX (%f)(%f)(%f)(%f)\n", exp(-6), sigmoid(6), exp(6), sigmoid(-6));
 //
 //	double arr[4] = { -4, 8, 13, 31 };
 //	double *ra;
 //	sigmoid_arr(arr, 4, &ra);
-//	for (int j = 0; j < 4; j++) printf("DDD (%d)(%f)\n", j, ra[j]);
+//	for (int j = 0; j < 4; j++) mllog(LOG_LEVEL_DEBUG, 1, "DDD (%d)(%f)\n", j, ra[j]);
 
 	sgd(w, epochs, mini_batch_size, eta);
 	neural_network_free(w);
@@ -380,7 +394,7 @@ int run_dummy() {
 	size_t num_neurs_1 = 14;
 	size_t num_neurs_2 = 3;
 	size_t num_neurs_3 = 4;
-	printf("run_dummy epochs(%lu)mbs(%lu)eta(%.1f)(%lu)(%lu)(%lu)\n", epochs, mini_batch_size, eta, num_neurs_1, num_neurs_2, num_neurs_3);
+	mllog(LOG_LEVEL_HIGH, 1, "run_dummy epochs(%lu)mbs(%lu)eta(%.1f)(%lu)(%lu)(%lu)\n", epochs, mini_batch_size, eta, num_neurs_1, num_neurs_2, num_neurs_3);
 	size_t num_trd = 5;
 	size_t num_vdd = 3;
 	size_t num_ttd = 2;
@@ -440,8 +454,18 @@ int run_dummy() {
 	return 0;
 }
 
-int main() {
-	printf("network-0 (%lu)(%lu)(%lu)\n", sizeof(unsigned int), sizeof(uint32_t), sizeof(double));
+int main(int argc, char **argv) {
+	printf("Initializing...\n");
+
+	if (argc < 2) {
+		printf("Please provide an environment ('dev' or 'prod') as the first argument\n");
+		exit(1);
+	}
+
+	char *arg_env = argv[1];
+	set_environment_from_str(arg_env);
+	char *env_str = get_environment_as_str();
+	mllog(LOG_LEVEL_HIGH, 1, "network-0 (%s)(%lu)(%lu)(%lu)\n", env_str, sizeof(unsigned int), sizeof(uint32_t), sizeof(double));
 //	run_mnist();
 	run_dummy();
 }
