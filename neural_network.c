@@ -64,6 +64,8 @@ void neural_network_free(neural_network_t *nn) {
 	list_free(nn->validation_results);
 	list_free(nn->test_data);
 	list_free(nn->test_results);
+
+	free(nn);
 }
 
 double sigmoid(double z) { return 1 / (1 + exp(-z)); }
@@ -86,14 +88,21 @@ void feedforward(neural_network_t *nn, matrix_t *a, matrix_t **output) {
 void sgd(neural_network_t *nn, size_t epochs, size_t mini_batch_size, double eta) {
 	if (!nn || !nn->training_data) return;
 
+	if (mini_batch_size > list_len(nn->training_data)) {
+		printf("Invalid mini batch size (%lu). Please choose a size less "
+			"than the size of the training data (%lu).\n",
+			mini_batch_size, list_len(nn->training_data));
+		return;
+	}
+
 	for (size_t i = 0; i < epochs; i++) {
 		list_shuffle(nn->training_data);
 		for (size_t j = 0; j < list_len(nn->training_data); j+= mini_batch_size)
 			update_mini_batch(nn, j, j + mini_batch_size, eta);
 		if (nn->test_data)
-			printf("Epoch (%lu): (%lu) / (%lu) \n", i + 1, evaluate(nn), list_len(nn->test_data));
+			printf("%sEpoch (%lu): (%lu) / (%lu)%s\n", KRED, i + 1, evaluate(nn), list_len(nn->test_data), KNRM);
 		else
-			printf("Epoch (%lu) complete\n", i + 1);
+			printf("%sEpoch (%lu) complete%s\n", KRED, i + 1, KNRM);
 	}
 }
 
@@ -130,6 +139,8 @@ void update_mini_batch(neural_network_t *nn, size_t start, size_t end, double et
 			matrix_sum(wb, dwb, &wbsum);
 			list_set(nabla_w, j, wbsum);
 		}
+		list_free(delta_nabla_b);
+		list_free(delta_nabla_w);
 	}
 
 	for (size_t i = 0; i < list_len(nn->biases); i++) {
@@ -148,6 +159,9 @@ void update_mini_batch(neural_network_t *nn, size_t start, size_t end, double et
 		list_set(nn->weights, i, sw);
 		list_set(nn->biases, i, sb);
 	}
+
+	list_free(nabla_b);
+	list_free(nabla_w);
 }
 
 void cost_derivative(matrix_t *output_activations, matrix_t *y, matrix_t **deriv) {
@@ -155,6 +169,7 @@ void cost_derivative(matrix_t *output_activations, matrix_t *y, matrix_t **deriv
 	matrix_t *m, *d;
 	m = matrix_product_scalar_ret(y, -1);
 	matrix_sum(output_activations, m, &d);
+	matrix_free(m);
 	if (deriv) *deriv = d;
 }
 
@@ -173,6 +188,8 @@ void backprop(neural_network_t *nn, matrix_t *x, matrix_t *y, list_t **nabla_b, 
 		list_set(nabla_bb, i, mb);
 		list_set(nabla_ww, i, mw);
 	}
+	printf("x(%s)(%lu)(%lu)\n", x?"GGG":"BBB", matrix_num_rows(x), matrix_num_cols(x));
+	matrix_print(x, 2, 0);
 
 	matrix_t *activation = x;
 	list_t *activations, *zs;
@@ -183,34 +200,70 @@ void backprop(neural_network_t *nn, matrix_t *x, matrix_t *y, list_t **nabla_b, 
 	for (size_t i = 0; i < list_len(nn->biases); i++) {
 		matrix_t *b = list_get(nn->biases, i);
 		matrix_t *w = list_get(nn->weights, i);
+		printf("w(%s)(%lu)(%lu)\n", w?"GGG":"BBB", matrix_num_rows(w), matrix_num_cols(w));
+		matrix_print(w, 2, 0);
+		printf("b(%s)(%lu)(%lu)\n", b?"GGG":"BBB", matrix_num_rows(b), matrix_num_cols(b));
+		matrix_print(b, 2, 0);
 		matrix_t *p, *z;
 		matrix_product(w, activation, &p);
 		matrix_sum(p, b, &z);
+		printf("z(%s)(%lu)(%lu)\n", z?"GGG":"BBB", matrix_num_rows(z), matrix_num_cols(z));
+		matrix_print(z, 2, 0);
 		list_set(zs, i, z);
 		activation = matrix_elementwise_func_4_ret(z, sigmoid);
+		printf("sigmoid-z(%s)(%lu)(%lu)\n", activation?"GGG":"BBB", matrix_num_rows(activation), matrix_num_cols(activation));
+		matrix_print(activation, 2, 0);
 		list_set(activations, 1 + i, activation);
 		matrix_free(p);
 	}
 
-	matrix_t *cost_deriv, *delta, *delta_tmp, *wwlast;
-	cost_derivative(list_get(activations, list_len(activations) - 1), y, &cost_deriv);
-	matrix_product(cost_deriv, matrix_elementwise_func_4_ret(list_get(zs, list_len(zs) - 1), sigmoid_prime), &delta);
+	printf("activations-1(%s)(%lu)(%lu)\n", list_get(activations, -1)?"GGG":"BBB", matrix_num_rows(list_get(activations, -1)), matrix_num_cols(list_get(activations, -1)));
+	matrix_print(list_get(activations, -1), 2, 0);
+	printf("y(%s)(%lu)(%lu)\n", y?"GGG":"BBB", matrix_num_rows(y), matrix_num_cols(y));
+	matrix_print(y, 2, 0);
+	matrix_t *cost_deriv = NULL, *delta = NULL, *delta_tmp = NULL, *wwlast = NULL;
+	cost_derivative(list_get(activations, -1), y, &cost_deriv);
+	printf("cost_deriv(%s)(%lu)(%lu)\n", cost_deriv?"GGG":"BBB", matrix_num_rows(cost_deriv), matrix_num_cols(cost_deriv));
+	matrix_print(cost_deriv, 2, 0);
+	matrix_t *zw = list_get(zs, -1);
+	printf("zw(%s)(%lu)(%lu)\n", zw?"GGG":"BBB", matrix_num_rows(zw), matrix_num_cols(zw));
+	matrix_print(zw, 2, 0);
+	matrix_t *wp = matrix_elementwise_func_4_ret(zw, sigmoid_prime);
+	printf("wp(%s)(%lu)(%lu)\n", wp?"GGG":"BBB", matrix_num_rows(wp), matrix_num_cols(wp));
+	matrix_print(wp, 2, 0);
+	matrix_free(wp);
+	matrix_t *zsp = matrix_elementwise_func_4_ret(list_get(zs, -1), sigmoid_prime);
+	matrix_product_elementwise(cost_deriv, zsp, &delta);
+	matrix_free(zsp);
+	matrix_free(cost_deriv);
 	list_set(nabla_bb, list_len(nabla_bb) - 1, delta);
-	matrix_product(delta, matrix_transpose(list_get(activations, list_len(activations) - 2)), &wwlast);
+	printf("delta(%s)(%lu)(%lu)\n", delta?"GGG":"BBB", matrix_num_rows(delta), matrix_num_cols(delta));
+	matrix_print(delta, 2, 0);
+	matrix_t *act_tr = matrix_transpose(list_get(activations, -2));
+	matrix_product(delta, act_tr, &wwlast);
+	matrix_free(act_tr);
 	list_set(nabla_ww, list_len(nabla_ww) - 1, wwlast);
 
-	for (size_t i = NUMBER_OF_LAYERS - 2; i > 0; i--) {
-		matrix_t *z = list_get(zs, i - 1);
+	for (size_t i = 2; i < NUMBER_OF_LAYERS; i++) {
+		matrix_t *z = list_get(zs, -i);
 		matrix_t *sp = matrix_elementwise_func_4_ret(z, sigmoid_prime);
-		matrix_product(matrix_transpose(list_get(nn->weights, i)), delta, &delta_tmp);
+		matrix_t *t = matrix_transpose(list_get(nn->weights, -i + 1));
+		matrix_product(t, delta, &delta_tmp);
+		matrix_free(t);
 		delta = NULL;
-		matrix_product(delta_tmp, sp, &delta);
+		matrix_product_elementwise(delta_tmp, sp, &delta);
+		matrix_free(sp);
 		matrix_free(delta_tmp);
-		list_set(nabla_bb, i - 1, delta);
-		matrix_product(delta, matrix_transpose(list_get(activations, i - 2)), &delta_tmp);
-		list_set(nabla_ww, i - 1, delta_tmp);
+		list_set(nabla_bb, -i, delta);
+		t = matrix_transpose(list_get(activations, -i - 1));
+		matrix_product(delta, t, &delta_tmp);
+		list_set(nabla_ww, -i, delta_tmp);
 		matrix_free(delta_tmp);
+		matrix_free(t);
 	}
+
+//	list_free(activations);
+	list_free(zs);
 }
 
 size_t evaluate(neural_network_t *nn) {
@@ -228,7 +281,7 @@ size_t evaluate(neural_network_t *nn) {
 		printf("XXXXX (%lu)(%lu):\n", matrix_num_rows(x), matrix_num_cols(x));
 //		matrix_print(x, 3, 0);
 		printf("FFOUT (%lu)(%lu)ffr(%lu)ffc(%lu)ffm(%.3f):\n", matrix_num_rows(ffout), matrix_num_cols(ffout), 1+ffr, 1+ffc, ffm);
-		matrix_print(ffout, 3, 0);
+		matrix_print(ffout, 9, 0);
 		printf("YYYYY (%lu)(%lu)yr(%lu)yc(%lu)ym(%.3f):\n", matrix_num_rows(y), matrix_num_cols(y), 1+yr, 1+yc, ym);
 		matrix_print(y, 0, 0);
 		if (ffr == yr && ffc == yc) correct++;
@@ -239,7 +292,7 @@ size_t evaluate(neural_network_t *nn) {
 }
 
 int run_mnist() {
-	size_t epochs = 3;
+	size_t epochs = 1;
 	size_t mini_batch_size = 10;
 	double eta = 3.0;
 	size_t num_neurs_1 = 784;
@@ -324,14 +377,14 @@ int run_mnist() {
 
 int run_dummy() {
 	size_t epochs = 3;
-	size_t mini_batch_size = 10;
+	size_t mini_batch_size = 1;
 	double eta = 3.0;
-	size_t num_neurs_1 = 784;
-	size_t num_neurs_2 = 13;
+	size_t num_neurs_1 = 14;
+	size_t num_neurs_2 = 3;
 	size_t num_neurs_3 = 4;
 	printf("run_dummy epochs(%lu)mbs(%lu)eta(%.1f)(%lu)(%lu)(%lu)\n", epochs, mini_batch_size, eta, num_neurs_1, num_neurs_2, num_neurs_3);
-	size_t num_trd = 90;
-	size_t num_vdd = 10;
+	size_t num_trd = 5;
+	size_t num_vdd = 3;
 	size_t num_ttd = 2;
 
 	neural_network_t *nn;
@@ -391,6 +444,6 @@ int run_dummy() {
 
 int main() {
 	printf("network-0 (%lu)(%lu)(%lu)\n", sizeof(unsigned int), sizeof(uint32_t), sizeof(double));
-//	run_mnist();
-	run_dummy();
+	run_mnist();
+//	run_dummy();
 }

@@ -14,6 +14,7 @@ size_t matrix_num_cols(matrix_t *);
 double matrix_get(matrix_t *m, size_t row, size_t col);
 void matrix_set(matrix_t *m, size_t row, size_t col, double value);
 void matrix_product(matrix_t *m1, matrix_t *m2, matrix_t **product);
+void matrix_product_elementwise(matrix_t *m1, matrix_t *m2, matrix_t **product);
 void matrix_product_scalar(matrix_t *m, double scalar);
 matrix_t *matrix_product_scalar_ret(matrix_t *m, double scalar);
 void matrix_sum(matrix_t *m1, matrix_t *m2, matrix_t **sum);

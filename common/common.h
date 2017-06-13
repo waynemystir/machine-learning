@@ -1,6 +1,15 @@
 #ifndef common_h
 #define common_h
 
+#define KNRM  "\x1B[0m"
+#define KRED  "\x1B[31m"
+#define KGRN  "\x1B[32m"
+#define KYEL  "\x1B[33m"
+#define KBLU  "\x1B[34m"
+#define KMAG  "\x1B[35m"
+#define KCYN  "\x1B[36m"
+#define KWHT  "\x1B[37m"
+
 typedef struct list list_t;
 
 typedef struct linked_list_node {
@@ -14,7 +23,7 @@ typedef void (*free_fp)(void *type);
 
 void list_init(list_t **lst, size_t count, void **data, free_fp ffp);
 size_t list_len(list_t *lst);
-void *list_get(list_t *lst, size_t index);
+void *list_get(list_t *lst, long index);
 void list_set(list_t *lst, size_t index, void *value);
 void *list_set_get_existing(list_t *lst, size_t index, void *value);
 void list_swap(list_t *lst, size_t i, size_t j);

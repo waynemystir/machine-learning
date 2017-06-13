@@ -35,9 +35,14 @@ size_t list_len(list_t *lst) {
 	return lst ? lst->count : 0;
 }
 
-void *list_get(list_t *lst, size_t index) {
-	if (!lst || !lst->data || lst->count <= index)
+void *list_get(list_t *lst, long index) {
+	if (!lst || !lst->data || (long)lst->count <= index || abs((long)lst->count) < abs(index)) {
+		printf("list_ggggget-NUUULLLLLLLLLL (%s)(%s)(%lu)(%ld)(%s)\n", lst?"G":"B", lst->data?"G":"B", lst->count, index, lst->count <= index?"G":"B");
 		return NULL;
+	}
+
+	if (index < 0)
+		return lst->data[(long)lst->count + index];
 
 	return lst->data[index];
 }
