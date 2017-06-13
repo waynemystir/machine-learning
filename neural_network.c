@@ -228,11 +228,9 @@ void backprop(neural_network_t *nn, matrix_t *x, matrix_t *y, list_t **nabla_b, 
 	matrix_t *zw = list_get(zs, -1);
 	printf("zw(%s)(%lu)(%lu)\n", zw?"GGG":"BBB", matrix_num_rows(zw), matrix_num_cols(zw));
 	matrix_print(zw, 2, 0);
-	matrix_t *wp = matrix_elementwise_func_4_ret(zw, sigmoid_prime);
-	printf("wp(%s)(%lu)(%lu)\n", wp?"GGG":"BBB", matrix_num_rows(wp), matrix_num_cols(wp));
-	matrix_print(wp, 2, 0);
-	matrix_free(wp);
 	matrix_t *zsp = matrix_elementwise_func_4_ret(list_get(zs, -1), sigmoid_prime);
+	printf("zsp(%s)(%lu)(%lu)\n", zsp?"GGG":"BBB", matrix_num_rows(zsp), matrix_num_cols(zsp));
+	matrix_print(zsp, 2, 0);
 	matrix_product_elementwise(cost_deriv, zsp, &delta);
 	matrix_free(zsp);
 	matrix_free(cost_deriv);
@@ -444,6 +442,6 @@ int run_dummy() {
 
 int main() {
 	printf("network-0 (%lu)(%lu)(%lu)\n", sizeof(unsigned int), sizeof(uint32_t), sizeof(double));
-	run_mnist();
-//	run_dummy();
+//	run_mnist();
+	run_dummy();
 }

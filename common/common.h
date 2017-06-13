@@ -12,11 +12,7 @@
 
 typedef struct list list_t;
 
-typedef struct linked_list_node {
-	void *data;
-	struct linked_list_node *next;
-} linked_list_node_t;
-
+typedef struct linked_list_node linked_list_node_t;
 typedef struct linked_list linked_list_t;
 
 typedef void (*free_fp)(void *type);
@@ -34,6 +30,8 @@ void linked_list_add_head(linked_list_t *list, void *data, linked_list_node_t **
 void linked_list_add_tail(linked_list_t *list, void *data, linked_list_node_t **new_node);
 linked_list_node_t *linked_list_get(linked_list_t *list, size_t index);
 void linked_list_split(linked_list_t *list, size_t index, linked_list_t **new_list_1, linked_list_t **new_list_2);
+
+int mllog(const char *fmt, ...);
 
 #define SZ_LIST sizeof(list_t)
 #define SZ_LLND sizeof(linked_list_node_t)

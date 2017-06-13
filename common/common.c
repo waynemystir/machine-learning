@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <stdarg.h>
 
 #include "common.h"
 
@@ -10,6 +11,11 @@ struct list {
 	size_t count;
 	free_fp ffp;
 };
+
+typedef struct linked_list_node {
+	void *data;
+	struct linked_list_node *next;
+} linked_list_node_t;
 
 struct linked_list {
 	linked_list_node_t *head;
@@ -176,4 +182,35 @@ void linked_list_split(linked_list_t *list, size_t index, linked_list_t **new_li
 	nl2->count = list->count - index;
 
 	free(list);
+}
+
+int mllog(const char *fmt, ...) {
+	int ret;
+	size_t len = strlen(fmt);
+	char wes[len + 256];
+	memset(wes, '\0', len + 256);
+	char time_text_delimit[] = "*";
+
+	time_t rawtime;
+	struct tm * timeinfo;
+
+	time ( &rawtime );
+	timeinfo = localtime ( &rawtime );
+	sprintf(wes, "%s%s ", asctime (timeinfo), time_text_delimit);
+	wes[strlen(wes) - strlen(time_text_delimit) - 2] = ' ';
+	strcat(wes, fmt);
+
+	/* Declare a va_list type variable */
+	va_list myargs;
+
+	/* Initialise the va_list variable with the ... after fmt */
+	va_start(myargs, fmt);
+
+	/* Forward the '...' to vprintf */
+	ret = vprintf(wes, myargs);
+
+	/* Clean up the va_list */
+	va_end(myargs);
+
+	return ret;
 }
