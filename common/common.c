@@ -191,6 +191,9 @@ void set_environment(ENVIRONMENT env) {
 }
 
 void set_environment_from_str(char *env_str) {
+	if (strcmp(env_str, "debug") == 0)
+		return set_environment(ENV_DEBUG);
+
 	if (strcmp(env_str, "dev") == 0)
 		return set_environment(ENV_DEV);
 
@@ -207,6 +210,7 @@ ENVIRONMENT get_environment() {
 
 char *get_environment_as_str() {
 	switch (environment) {
+		case ENV_DEBUG: return "ENV_DEBUG";
 		case ENV_DEV: return "ENV_DEV";
 		case ENV_PROD: return "ENV_PROD";
 		default: return "ENV_UNKNOWN";
@@ -214,6 +218,8 @@ char *get_environment_as_str() {
 }
 
 int mllog(LOG_LEVEL ll, int with_time, const char *fmt, ...) {
+	if (environment == ENV_DEV && ll < LOG_LEVEL_INFO)
+		return 0;
 	if (environment == ENV_PROD && ll < LOG_LEVEL_WARNING)
 		return 0;
 

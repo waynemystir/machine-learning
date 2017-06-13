@@ -51,6 +51,15 @@ void neural_net_init(neural_network_t **neural_net, int num_neurons[3]) {
 
 	matrix_elementwise_func_3(bias1, gaussrand);
 	matrix_elementwise_func_3(bias2, gaussrand);
+
+	mllog(LOG_LEVEL_DEBUG, 1, "NN_init wts1 (%s)(%lu)(%lu)\n", wts1?"GGG":"BBB", matrix_num_rows(wts1), matrix_num_cols(wts1));
+	nn_matrix_print(LOG_LEVEL_DEBUG, wts1, 6, 0);
+	mllog(LOG_LEVEL_DEBUG, 1, "NN_init wts2 (%s)(%lu)(%lu)\n", wts2?"GGG":"BBB", matrix_num_rows(wts2), matrix_num_cols(wts2));
+	nn_matrix_print(LOG_LEVEL_DEBUG, wts2, 6, 0);
+	mllog(LOG_LEVEL_DEBUG, 1, "NN_init bias1 (%s)(%lu)(%lu)\n", bias1?"GGG":"BBB", matrix_num_rows(bias1), matrix_num_cols(bias1));
+	nn_matrix_print(LOG_LEVEL_DEBUG, bias1, 6, 0);
+	mllog(LOG_LEVEL_DEBUG, 1, "NN_init bias2 (%s)(%lu)(%lu)\n", bias2?"GGG":"BBB", matrix_num_rows(bias2), matrix_num_cols(bias2));
+	nn_matrix_print(LOG_LEVEL_DEBUG, bias2, 6, 0);
 }
 
 void neural_network_free(neural_network_t *nn) {
@@ -149,7 +158,7 @@ void update_mini_batch(neural_network_t *nn, size_t start, size_t end, double et
 		matrix_t *nw = list_get(nabla_w, i);
 		matrix_t *b = list_get(nn->biases, i);
 		matrix_t *nb = list_get(nabla_b, i);
-		double scalar = eta * (start - end);
+		double scalar = eta / (start - end);
 
 		matrix_product_scalar(nw, scalar);
 		matrix_product_scalar(nb, scalar);
@@ -276,11 +285,11 @@ size_t evaluate(neural_network_t *nn) {
 		feedforward(nn, x, &ffout);
 		ffm = matrix_argmax(ffout, &ffr, &ffc);
 		ym = matrix_argmax(y, &yr, &yc);
-		mllog(LOG_LEVEL_HIGH, 1, "XXXXX (%lu)(%lu):\n", matrix_num_rows(x), matrix_num_cols(x));
+		mllog(LOG_LEVEL_INFO, 1, "XXXXX (%lu)(%lu):\n", matrix_num_rows(x), matrix_num_cols(x));
 //		nn_matrix_print(LOG_LEVEL_DEBUG, x, 3, 0);
-		mllog(LOG_LEVEL_HIGH, 1, "FFOUT (%lu)(%lu)ffr(%lu)ffc(%lu)ffm(%.3f):\n", matrix_num_rows(ffout), matrix_num_cols(ffout), 1+ffr, 1+ffc, ffm);
+		mllog(LOG_LEVEL_INFO, 1, "FFOUT (%lu)(%lu)ffr(%lu)ffc(%lu)ffm(%.3f):\n", matrix_num_rows(ffout), matrix_num_cols(ffout), 1+ffr, 1+ffc, ffm);
 		nn_matrix_print(LOG_LEVEL_DEBUG, ffout, 9, 0);
-		mllog(LOG_LEVEL_HIGH, 1, "YYYYY (%lu)(%lu)yr(%lu)yc(%lu)ym(%.3f):\n", matrix_num_rows(y), matrix_num_cols(y), 1+yr, 1+yc, ym);
+		mllog(LOG_LEVEL_INFO, 1, "YYYYY (%lu)(%lu)yr(%lu)yc(%lu)ym(%.3f):\n", matrix_num_rows(y), matrix_num_cols(y), 1+yr, 1+yc, ym);
 		nn_matrix_print(LOG_LEVEL_DEBUG, y, 0, 0);
 		if (ffr == yr && ffc == yc) correct++;
 		matrix_free(ffout);
@@ -291,12 +300,16 @@ size_t evaluate(neural_network_t *nn) {
 
 void nn_matrix_print(LOG_LEVEL LL, matrix_t *m, int precision, int zero_precision) {
 	switch (get_environment()) {
-		case ENV_DEV: {
+		case ENV_DEBUG: {
 			matrix_print(m, precision, zero_precision);
 			break;
 		}
+		case ENV_DEV: {
+			if (LL >= LOG_LEVEL_WARNING) matrix_print(m, precision, zero_precision);
+			break;
+		}
 		case ENV_PROD: {
-			if (LL >= LOG_LEVEL_INFO) matrix_print(m, precision, zero_precision);
+			if (LL >= LOG_LEVEL_HIGH) matrix_print(m, precision, zero_precision);
 			break;
 		}
 		default: break;
@@ -304,7 +317,7 @@ void nn_matrix_print(LOG_LEVEL LL, matrix_t *m, int precision, int zero_precisio
 }
 
 int run_mnist() {
-	size_t epochs = 1;
+	size_t epochs = 3;
 	size_t mini_batch_size = 10;
 	double eta = 3.0;
 	size_t num_neurs_1 = 784;
@@ -389,15 +402,15 @@ int run_mnist() {
 
 int run_dummy() {
 	size_t epochs = 3;
-	size_t mini_batch_size = 1;
+	size_t mini_batch_size = 10;
 	double eta = 3.0;
-	size_t num_neurs_1 = 14;
-	size_t num_neurs_2 = 3;
+	size_t num_neurs_1 = 256;
+	size_t num_neurs_2 = 30;
 	size_t num_neurs_3 = 4;
 	mllog(LOG_LEVEL_HIGH, 1, "run_dummy epochs(%lu)mbs(%lu)eta(%.1f)(%lu)(%lu)(%lu)\n", epochs, mini_batch_size, eta, num_neurs_1, num_neurs_2, num_neurs_3);
-	size_t num_trd = 5;
-	size_t num_vdd = 3;
-	size_t num_ttd = 2;
+	size_t num_trd = 500;
+	size_t num_vdd = 100;
+	size_t num_ttd = 100;
 
 	neural_network_t *nn;
 	int sizes[] = {num_neurs_1, num_neurs_2, num_neurs_3};

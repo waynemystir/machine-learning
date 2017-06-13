@@ -18,8 +18,9 @@ typedef struct linked_list linked_list_t;
 typedef void (*free_fp)(void *type);
 
 typedef enum ENVIRONMENT {
-	ENV_DEV = 0,
-	ENV_PROD = 1,
+	ENV_DEBUG = 0,
+	ENV_DEV = 1,
+	ENV_PROD = 2,
 } ENVIRONMENT;
 
 typedef enum LOG_LEVEL {
