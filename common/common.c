@@ -44,23 +44,30 @@ size_t list_len(list_t *lst) {
 }
 
 void *list_get(list_t *lst, long index) {
-	if (!lst || !lst->data || (long)lst->count <= index || abs((long)lst->count) < abs(index)) {
-		printf("list_ggggget-NUUULLLLLLLLLL (%s)(%s)(%lu)(%ld)(%s)\n", lst?"G":"B", lst->data?"G":"B", lst->count, index, lst->count <= index?"G":"B");
-		return NULL;
+	if (!lst || !lst->data) {
+		printf("list_ggggget-NUUULLLLLLLLLL (%s)(%s)\n", lst?"G":"B", lst->data?"G":"B");
+		exit(1);
 	}
 
-	if (index < 0)
-		return lst->data[(long)lst->count + index];
+	long calced_index = index < 0 ? (long)lst->count + index : index;
+	if (calced_index < 0 || calced_index >= (long)lst->count) exit(1);
 
-	return lst->data[index];
+	return lst->data[calced_index];
 }
 
-void list_set(list_t *lst, size_t index, void *value) {
-	if (!lst || !lst->data || lst->count <= index)
+void list_set(list_t *lst, long index, void *value) {
+	if (!lst || !lst->data) {
+		printf("list_set: Something went wrong\n");
+		exit(1);
 		return;
-	if (lst->ffp) lst->ffp(lst->data[index]);
-	else free(lst->data[index]);
-	lst->data[index] = value;
+	}
+
+	long calced_index = index < 0 ? (long)lst->count + index : index;
+	if (calced_index < 0 || calced_index >= (long)lst->count) exit(1);
+
+	if (lst->ffp) lst->ffp(lst->data[calced_index]);
+	else free(lst->data[calced_index]);
+	lst->data[calced_index] = value;
 }
 
 void *list_set_get_existing(list_t *lst, size_t index, void *value) {
@@ -94,7 +101,7 @@ void list_shuffle(list_t *lst) {
 
 	size_t last_index = lst->count - 1;
 	for (size_t i = 0; i < lst->count; i++)
-		list_swap(lst, rand() % lst->count, last_index);
+		list_swap(lst, rand() / (RAND_MAX / (lst->count - i) + 1), last_index);
 }
 
 void list_free(list_t *lst) {

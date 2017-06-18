@@ -35,5 +35,19 @@ int main() {
 	matrix_elementwise_func_3(mg, gaussrand);
 	matrix_print(mg, 7, 1);
 
+	matrix_t *c;
+	matrix_constant_init(&c, 3, 4, 4.0);
+	double scalar = 3.50000;
+	matrix_product_scalar(c, scalar);
+	printf("matrix_product_scalar\n");
+	matrix_print(c, 5, 0);
+
+	matrix_t *z;
+	matrix_zero_init(&z, 10, 1);
+	matrix_set(z, 7, 0, 1.0);
+	size_t amr = 0, amc = 0;
+	double amv = matrix_argmax(z, &amr, &amc);
+	printf("ARGMAX (%lu)(%lu)(%.4f)\n", amr, amc, amv);
+
 	return 0;
 }

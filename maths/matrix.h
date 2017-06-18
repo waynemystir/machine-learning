@@ -9,6 +9,8 @@ typedef double (*elementwise_function_4)(double arg);
 
 void matrix_init(matrix_t **m, size_t num_rows, size_t num_cols, double **data);
 void matrix_zero_init(matrix_t **m, size_t num_rows, size_t num_cols);
+void matrix_constant_init(matrix_t **m, size_t num_rows, size_t num_cols, double constant);
+void matrix_copy(matrix_t *matrix_to_copy, matrix_t **copy);
 size_t matrix_num_rows(matrix_t *);
 size_t matrix_num_cols(matrix_t *);
 double matrix_get(matrix_t *m, size_t row, size_t col);
@@ -26,6 +28,7 @@ matrix_t *matrix_elementwise_func_4_ret(matrix_t *m, elementwise_function_4 ef);
 matrix_t *matrix_transpose(matrix_t *m);
 double matrix_argmax(matrix_t *m, size_t *row, size_t *col);
 void matrix_print(matrix_t *m, int precision, int zero_precision);
+void matrix_print_to_file(matrix_t *m, int precision, int zero_precision, char *filename);
 void matrix_free(matrix_t *m);
 
 #define SZ_MATRIX sizeof(matrix_t)
