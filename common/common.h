@@ -11,6 +11,7 @@
 #define KWHT  "\x1B[37m"
 
 typedef struct list list_t;
+typedef struct tuple tuple_t;
 
 typedef struct linked_list_node linked_list_node_t;
 typedef struct linked_list linked_list_t;
@@ -40,6 +41,13 @@ void list_swap(list_t *lst, size_t i, size_t j);
 void list_shuffle(list_t *lst);
 void list_free(list_t *lst);
 
+tuple_t *tuple_init(size_t count, void **data, free_fp ffp);
+void *tuple_get(tuple_t *t, long index);
+void tuple_set(tuple_t *t, long index, void *value);
+void tuple_free(tuple_t *t);
+
+list_t *zip(list_t *, list_t*);
+
 void linked_list_add_head(linked_list_t *list, void *data, linked_list_node_t **new_node);
 void linked_list_add_tail(linked_list_t *list, void *data, linked_list_node_t **new_node);
 linked_list_node_t *linked_list_get(linked_list_t *list, size_t index);
@@ -52,6 +60,7 @@ char *get_environment_as_str();
 int mllog(LOG_LEVEL ll, int with_time, const char *fmt, ...);
 
 #define SZ_LIST sizeof(list_t)
+#define SZ_TPLE sizeof(tuple_t)
 #define SZ_LLND sizeof(linked_list_node_t)
 #define SZ_LL sizeof(linked_list_t)
 

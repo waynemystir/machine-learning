@@ -14,6 +14,12 @@ struct list {
 	free_fp ffp;
 };
 
+struct tuple {
+	void **data;
+	size_t count;
+	free_fp ffp;
+};
+
 typedef struct linked_list_node {
 	void *data;
 	struct linked_list_node *next;
@@ -101,7 +107,8 @@ void list_shuffle(list_t *lst) {
 
 	size_t last_index = lst->count - 1;
 	for (size_t i = 0; i < lst->count; i++)
-		list_swap(lst, rand() / (RAND_MAX / (lst->count - i) + 1), last_index);
+		list_swap(lst, rand() / (RAND_MAX / lst->count + 1), last_index);
+//		list_swap(lst, rand() / (RAND_MAX / (lst->count - i) + 1), last_index);
 }
 
 void list_free(list_t *lst) {
@@ -114,6 +121,82 @@ void list_free(list_t *lst) {
 		free(lst->data);
 	}
 	free(lst);
+}
+
+tuple_t *tuple_init(size_t count, void **data, free_fp ffp) {
+	tuple_t *t = malloc(SZ_TPLE);
+	memset(t, '\0', SZ_TPLE);
+	t->count = count;
+	t->ffp = ffp;
+	if (data) {
+		t->data = data;
+		return t;
+	}
+
+	t->data = calloc(count, sizeof(void *));
+	return t;
+}
+
+void *tuple_get(tuple_t *t, long index) {
+	if (!t || !t->data) {
+		printf("t_ggggget-NUUULLLLLLLLLL (%s)(%s)\n", t?"G":"B", t->data?"G":"B");
+		exit(1);
+	}
+
+	long calced_index = index < 0 ? (long)t->count + index : index;
+	if (calced_index < 0 || calced_index >= (long)t->count) exit(1);
+
+	return t->data[calced_index];
+}
+
+void tuple_set(tuple_t *t, long index, void *value) {
+	if (!t || !t->data) {
+		printf("t_set: Something went wrong\n");
+		exit(1);
+		return;
+	}
+
+	long calced_index = index < 0 ? (long)t->count + index : index;
+	if (calced_index < 0 || calced_index >= (long)t->count) exit(1);
+
+	if (t->ffp) t->ffp(t->data[calced_index]);
+	else free(t->data[calced_index]);
+	t->data[calced_index] = value;
+}
+
+void tuple_free(tuple_t *t) {
+	if (!t) return;
+
+	if (t->data) {
+		for (int i = 0; i < t->count; i++)
+			if (t->ffp) t->ffp(t->data[i]);
+			else free(t->data[i]);
+		free(t->data);
+	}
+	free(t);
+}
+
+list_t *zip(list_t *l1, list_t *l2) {
+	if (!l1 || !l2) {
+		printf("zip problem - given list is NULL\n");
+		exit(1);
+	}
+
+	if (l1->count != l2->count) {
+		printf("zip problem - counts not equal\n");
+		exit(1);
+	}
+
+	list_t *l;
+	list_init(&l, l1->count, NULL, (free_fp)tuple_free);
+	for (long i = 0; i < l1->count; i++) {
+		tuple_t *t = tuple_init(2, NULL, l1->ffp);
+		tuple_set(t, 0, list_get(l1, i));
+		tuple_set(t, 1, list_get(l2, i));
+		list_set(l, i, t);
+	}
+
+	return l;
 }
 
 void linked_list_add_head(linked_list_t *list, void *data, linked_list_node_t **new_node) {

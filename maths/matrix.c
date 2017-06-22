@@ -246,7 +246,7 @@ void matrix_print_to_file(matrix_t *m, int precision, int zero_precision, char *
 		if (i != 0) fprintf(f, "\n");
 		for (int j = 0; j < m->num_cols; j++) {
 			double w = matrix_get(m, i, j);
-			fprintf(f, "%.*f  ", w == 0 ? zero_precision : precision, w);
+			fprintf(f, "%.*fZ", w == 0 ? zero_precision : precision, w);
 		}
 	}
 	fprintf(f, "\n");

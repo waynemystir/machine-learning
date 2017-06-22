@@ -14,11 +14,8 @@ struct neural_network {
 	list_t *weights;
 	list_t *biases;
 	list_t *training_data;
-	list_t *training_results;
 	list_t *validation_data;
-	list_t *validation_results;
 	list_t *test_data;
-	list_t *test_results;
 };
 
 void neural_net_init(neural_network_t **neural_net, int num_neurons[3]) {
@@ -61,6 +58,11 @@ void neural_net_init(neural_network_t **neural_net, int num_neurons[3]) {
 	mllog(LOG_LEVEL_HIGH, 1, "NN_init bias2 (%s)(%lu)(%lu)\n", bias2?"GGG":"BBB", matrix_num_rows(bias2), matrix_num_cols(bias2));
 //	nn_matrix_print(LOG_LEVEL_HIGH, bias2, 13, 0);
 
+	matrix_print_to_file(wts1, 15, 0, "wts1.txt");
+	matrix_print_to_file(wts2, 15, 0, "wts2.txt");
+	matrix_print_to_file(bias1, 15, 0, "bia1.txt");
+	matrix_print_to_file(bias2, 15, 0, "bia2.txt");
+
 }
 
 void neural_network_free(neural_network_t *nn) {
@@ -69,11 +71,8 @@ void neural_network_free(neural_network_t *nn) {
 	list_free(nn->weights);
 	list_free(nn->biases);
 	list_free(nn->training_data);
-	list_free(nn->training_results);
 	list_free(nn->validation_data);
-	list_free(nn->validation_results);
 	list_free(nn->test_data);
-	list_free(nn->test_results);
 
 	free(nn);
 }
@@ -132,8 +131,9 @@ void update_mini_batch(neural_network_t *nn, size_t start, size_t end, double et
 	}
 
 	for (size_t i = start; i < end; i++) {
-		matrix_t *x = list_get(nn->training_data, i);
-		matrix_t *y = list_get(nn->training_results, i);
+		matrix_t *x = tuple_get(list_get(nn->training_data, i), 0);
+		matrix_t *y = tuple_get(list_get(nn->training_data, i), 1);
+//		matrix_t *y = list_get(nn->training_results, i);
 		list_t *delta_nabla_b, *delta_nabla_w;
 		backprop(nn, x, y, &delta_nabla_b, &delta_nabla_w);
 
@@ -255,14 +255,14 @@ void backprop(neural_network_t *nn, matrix_t *x, matrix_t *y, list_t **nabla_b, 
 }
 
 size_t evaluate(neural_network_t *nn) {
-	mllog(LOG_LEVEL_DEBUG, 1, "Lets TRY to EVALUATE\n");
-	if (!nn || !nn->test_data || !nn->test_results || list_len(nn->test_data) != list_len(nn->test_results)) return 0;
+	if (!nn || !nn->test_data) return 0;
 	mllog(LOG_LEVEL_DEBUG, 1, "Lets EVALUATE\n");
 
 	size_t correct = 0, ffr = 0, ffc = 0, yr = 0, yc = 0;
 	for (size_t i = 0; i < list_len(nn->test_data); i++) {
-		matrix_t *x = list_get(nn->test_data, i);
-		matrix_t *y = list_get(nn->test_results, i);
+		matrix_t *x = tuple_get(list_get(nn->test_data, i), 0);
+		matrix_t *y = tuple_get(list_get(nn->test_data, i), 1);
+//		matrix_t *y = list_get(nn->test_results, i);
 		matrix_t *ffout;
 		feedforward(nn, x, &ffout);
 		matrix_argmax(ffout, &ffr, &ffc);
@@ -293,7 +293,7 @@ void nn_matrix_print(LOG_LEVEL LL, matrix_t *m, int precision, int zero_precisio
 }
 
 int run_mnist() {
-	size_t epochs = 1;
+	size_t epochs = 5;
 	size_t mini_batch_size = 10;
 	double eta = 3.0;
 	size_t num_neurs_1 = 784;
@@ -331,24 +331,28 @@ int run_mnist() {
 	neural_net_init(&w, sizes);
 	for (int i = 0; i < 3; i++) mllog(LOG_LEVEL_HIGH, 1, "sz(%d)(%d)\n", i, w->num_neurons[i]);
 
+	list_t *tr_d = NULL, *tr_r = NULL, *vl_d = NULL, *vl_r = NULL, *te_d = NULL, *te_r = NULL;
+
 	size_t num_validation = 10 * 1000;
-	get_images(TRAIN_IMAGES_FILENAME, num_train_images, num_rows, num_cols, num_validation, &w->training_data, &w->validation_data);
-	get_images(TEST_IMAGES_FILENAME, num_test_images, num_rows, num_cols, 0, &w->test_data, NULL);
-	mllog(LOG_LEVEL_HIGH, 1, "We got the images (%lu)(%lu)(%lu)...\n",
-		list_len(w->training_data), list_len(w->validation_data), list_len(w->test_data));
-	get_labels(TRAIN_LABELS_FILENAME, num_train_labels, num_validation, &w->training_results, &w->validation_results);
-	get_labels(TEST_LABELS_FILENAME, num_test_labels, 0, &w->test_results, NULL);
-	mllog(LOG_LEVEL_HIGH, 1, "We got the labels (%lu)(%lu)(%lu)...\n",
-		list_len(w->training_results), list_len(w->validation_results), list_len(w->test_results));
+	get_images(TRAIN_IMAGES_FILENAME, num_train_images, num_rows, num_cols, num_validation, &tr_d, &vl_d);
+	get_images(TEST_IMAGES_FILENAME, num_test_images, num_rows, num_cols, 0, &te_d, NULL);
+	mllog(LOG_LEVEL_HIGH, 1, "We got the images (%lu)(%lu)(%lu)...\n", list_len(tr_d), list_len(vl_d), list_len(te_d));
+	get_labels(TRAIN_LABELS_FILENAME, num_train_labels, num_validation, &tr_r, &vl_r);
+	get_labels(TEST_LABELS_FILENAME, num_test_labels, 0, &te_r, NULL);
+	mllog(LOG_LEVEL_HIGH, 1, "We got the labels (%lu)(%lu)(%lu)...\n", list_len(tr_r), list_len(vl_r), list_len(te_r));
 
 //	size_t num_validation = 0;
 //	size_t num_images = 10000;
-//	get_images(TRAIN_IMAGES_FILENAME, num_images, num_rows, num_cols, num_validation, &w->training_data, &w->validation_data);
-//	get_images(TEST_IMAGES_FILENAME, num_images, num_rows, num_cols, 0, &w->test_data, NULL);
-//	mllog(LOG_LEVEL_HIGH, 1, "We got the images (%lu)(%lu)(%lu)...\n", list_len(w->training_data), list_len(w->validation_data), list_len(w->test_data));
-//	get_labels(TRAIN_LABELS_FILENAME, num_images, num_validation, &w->training_results, &w->validation_results);
-//	get_labels(TEST_LABELS_FILENAME, num_images, 0, &w->test_results, NULL);
-//	mllog(LOG_LEVEL_HIGH, 1, "We got the labels (%lu)(%lu)(%lu)...\n", list_len(w->training_results), list_len(w->validation_results), list_len(w->test_results));
+//	get_images(TRAIN_IMAGES_FILENAME, num_images, num_rows, num_cols, num_validation, &tr_d, &vl_d);
+//	get_images(TEST_IMAGES_FILENAME, num_images, num_rows, num_cols, 0, &te_d, NULL);
+//	mllog(LOG_LEVEL_HIGH, 1, "We got the images (%lu)(%lu)(%lu)...\n", list_len(tr_d), list_len(vl_d), list_len(te_d));
+//	get_labels(TRAIN_LABELS_FILENAME, num_images, num_validation, &tr_r, &vl_r);
+//	get_labels(TEST_LABELS_FILENAME, num_images, 0, &te_r, NULL);
+//	mllog(LOG_LEVEL_HIGH, 1, "We got the labels (%lu)(%lu)(%lu)...\n", list_len(tr_r), list_len(vl_r), list_len(te_r));
+
+	w->training_data = zip(tr_d, tr_r);
+//	w->validation_data = zip(vl_d, vl_r);
+	w->test_data = zip(te_d, te_r);
 
 //	size_t wes = 4;
 //	matrix_t *m = list_get(w->training_data, wes);
@@ -413,12 +417,13 @@ int run_dummy() {
 	neural_network_t *nn;
 	int sizes[] = {num_neurs_1, num_neurs_2, num_neurs_3};
 	neural_net_init(&nn, sizes);
-	list_init(&nn->training_data, num_trd, NULL, (free_fp)matrix_free);
-	list_init(&nn->training_results, num_trd, NULL, (free_fp)matrix_free);
-	list_init(&nn->validation_data, num_vdd, NULL, (free_fp)matrix_free);
-	list_init(&nn->validation_results, num_vdd, NULL, (free_fp)matrix_free);
-	list_init(&nn->test_data, num_ttd, NULL, (free_fp)matrix_free);
-	list_init(&nn->test_results, num_ttd, NULL, (free_fp)matrix_free);
+	list_t *tr_d, *tr_r, *vl_d, *vl_r, *te_d, *te_r;
+	list_init(&tr_d, num_trd, NULL, (free_fp)matrix_free);
+	list_init(&tr_r, num_trd, NULL, (free_fp)matrix_free);
+	list_init(&vl_d, num_vdd, NULL, (free_fp)matrix_free);
+	list_init(&vl_r, num_vdd, NULL, (free_fp)matrix_free);
+	list_init(&te_d, num_ttd, NULL, (free_fp)matrix_free);
+	list_init(&te_r, num_ttd, NULL, (free_fp)matrix_free);
 
 	for (size_t i = 0; i < num_trd; i++) {
 		matrix_t *m, *mr;
@@ -429,9 +434,10 @@ int run_dummy() {
 		int resval = mrand(num_neurs_3);
 		for (int j = 0; j < num_neurs_3; j++)
 			matrix_set(mr, j, 0, resval == j ? 1 : 0);
-		list_set(nn->training_data, i, m);
-		list_set(nn->training_results, i, mr);
+		list_set(tr_d, i, m);
+		list_set(tr_r, i, mr);
 	}
+	nn->training_data = zip(tr_d, tr_r);
 
 	for (size_t i = 0; i < num_vdd; i++) {
 		matrix_t *m, *mr;
@@ -442,9 +448,10 @@ int run_dummy() {
 		int resval = mrand(num_neurs_3);
 		for (int j = 0; j < num_neurs_3; j++)
 			matrix_set(mr, j, 0, resval == j ? 1 : 0);
-		list_set(nn->validation_data, i, m);
-		list_set(nn->validation_results, i, mr);
+		list_set(vl_d, i, m);
+		list_set(vl_r, i, mr);
 	}
+	nn->validation_data = zip(vl_d, vl_r);
 
 	for (size_t i = 0; i < num_ttd; i++) {
 		matrix_t *m, *mr;
@@ -455,9 +462,10 @@ int run_dummy() {
 		int resval = mrand(num_neurs_3);
 		for (int j = 0; j < num_neurs_3; j++)
 			matrix_set(mr, j, 0, resval == j ? 1 : 0);
-		list_set(nn->test_data, i, m);
-		list_set(nn->test_results, i, mr);
+		list_set(te_d, i, m);
+		list_set(te_r, i, mr);
 	}
+	nn->test_data = zip(te_d, te_r);
 
 	sgd(nn, epochs, mini_batch_size, eta);
 	neural_network_free(nn);
