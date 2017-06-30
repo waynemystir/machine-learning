@@ -112,7 +112,11 @@ void sgd(neural_network_t *nn, size_t epochs, size_t mini_batch_size, double eta
 }
 
 void update_mini_batch(neural_network_t *nn, size_t start, size_t end, double eta) {
-	if (start >= end || !nn || !nn->biases || !nn->weights || list_len(nn->biases) != list_len(nn->weights)) return;
+	if (start >= end || !nn || !nn->biases || !nn->weights || list_len(nn->biases) != list_len(nn->weights)) {
+		printf("updata_mini_batch: ERROR\n");
+		exit(1);
+	}
+
 	list_t *nabla_b, *nabla_w;
 	list_init(&nabla_b, list_len(nn->biases), NULL, (free_fp)matrix_free);
 	list_init(&nabla_w, list_len(nn->weights), NULL, (free_fp)matrix_free);
@@ -167,6 +171,11 @@ void update_mini_batch(neural_network_t *nn, size_t start, size_t end, double et
 		list_set(nn->biases, i, sb);
 	}
 
+//	double w = matrix_get(list_get(nn->weights, 0), 0, 0);
+//	double b = matrix_get(list_get(nn->biases, 0), 0, 0);
+//	double x = matrix_get(tuple_get(list_get(nn->training_data, 0), 0), 0, 0);
+//	double y = matrix_get(tuple_get(list_get(nn->training_data, 0), 1), 0, 0);
+//	printf("AAAAAAAAAAAAAA (%.5f)(%.5f)(%.5f)(%.5f)(%.5f)\n", w, x, b, w * x + b, y);
 //	matrix_print(list_get(nn->weights, 0), 3, 3);
 //	matrix_print(list_get(nn->biases, 0), 3, 3);
 //	list_free(nabla_b);
@@ -447,7 +456,6 @@ int run_toy() {
 
 	nn->training_data = zip(tr_d, tr_r);
 	nn->test_data = zip(te_d, te_r);
-
 	sgd(nn, epochs, mini_batch_size, eta);
 	neural_network_free(nn);
 

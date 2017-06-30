@@ -56,7 +56,14 @@ void *list_get(list_t *lst, long index) {
 	}
 
 	long calced_index = index < 0 ? (long)lst->count + index : index;
-	if (calced_index < 0 || calced_index >= (long)lst->count) exit(1);
+	if (calced_index < 0) {
+		printf("list_get ERROR: calced_index (%ld) < 0\n", calced_index);
+		exit(1);
+	}
+	if (calced_index >= (long)lst->count) {
+		printf("list_get ERROR: calced_index (%ld) >= lst->count (%lu)\n", calced_index, lst->count);
+		exit(1);
+	}
 
 	return lst->data[calced_index];
 }
