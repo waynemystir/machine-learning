@@ -95,8 +95,11 @@ void matrix_product(matrix_t *m1, matrix_t *m2, matrix_t **product) {
 }
 
 void matrix_product_elementwise(matrix_t *m1, matrix_t *m2, matrix_t **product) {
-	if (!m1 || !m2 || m1->num_rows != m2->num_rows || m1->num_cols != m2->num_cols) {
-		printf("matrix_product_elementwise: PROBLEMMMMMMMMMMM (%s)(%s)(%lu)(%lu)\n", m1?"GG":"BB", m2?"GG":"BB", m1->num_cols, m2->num_rows);
+	if (!m1 || !m2) {
+		printf("matrix_product_elementwise: PROBLEMMMMMMMMMMM (%s)(%s)\n", m1?"GG":"BB", m2?"GG":"BB");
+		exit(1);
+	} else if (m1->num_rows != m2->num_rows || m1->num_cols != m2->num_cols) {
+		printf("matrix_product_elementwise: ERROR: rows (%lu)(%lu) columns (%lu)(%lu)\n", m1->num_rows, m2->num_rows, m1->num_cols, m2->num_cols);
 		exit(1);
 	}
 

@@ -2,6 +2,7 @@
 
 cmake_minimum_required (VERSION 2.6)
 project (machine-learning)
+#set(CMAKE_BUILD_TYPE Debug)
 
 include_directories ("${PROJECT_SOURCE_DIR}/maths")
 add_subdirectory (maths) 

@@ -6,7 +6,7 @@
 
 typedef struct neural_network neural_network_t;
 
-void neural_net_init(neural_network_t **neural_net, int num_neurons[3]);
+void neural_net_init(neural_network_t **neural_net, list_t *num_neurons);
 void feedforward(neural_network_t *nn, matrix_t *a, matrix_t **output);
 void sgd(neural_network_t *nn, size_t epochs, size_t mini_batch_size, double eta);
 void nn_matrix_print(LOG_LEVEL LL, matrix_t *m, int precision, int zero_precision);

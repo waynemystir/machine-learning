@@ -7,10 +7,9 @@
 #include "maths.h"
 #include "prepare_data.h"
 
-#define NUMBER_OF_LAYERS 3 // including input, hidden, output
-
 struct neural_network {
-	int num_neurons[NUMBER_OF_LAYERS];
+	size_t num_layers;
+	list_t *num_neurons;
 	list_t *weights;
 	list_t *biases;
 	list_t *training_data;
@@ -18,50 +17,43 @@ struct neural_network {
 	list_t *test_data;
 };
 
-void neural_net_init(neural_network_t **neural_net, int num_neurons[3]) {
-	if (!neural_net) return;
+void neural_net_init(neural_network_t **neural_net, list_t *num_neurons) {
+	if (!neural_net || !num_neurons) return;
 
 	neural_network_t *nn = malloc(sizeof(neural_network_t));
 	if (!nn) return;
 	memset(nn, '\0', sizeof(neural_network_t));
 
 	*neural_net = nn;
-	memcpy(nn->num_neurons, num_neurons, 3 * sizeof(int));
+	nn->num_layers = list_len(num_neurons);
+	nn->num_neurons = num_neurons;
 
-	list_init(&nn->weights, NUMBER_OF_LAYERS - 1, NULL, (free_fp)matrix_free);
-	list_init(&nn->biases, NUMBER_OF_LAYERS - 1, NULL, (free_fp)matrix_free);
+	list_init(&nn->weights, nn->num_layers - 1, NULL, (free_fp)matrix_free);
+	list_init(&nn->biases, nn->num_layers - 1, NULL, (free_fp)matrix_free);
 
-	matrix_t *wts1, *wts2, *bias1, *bias2;
+	for (size_t i = 0; i < nn->num_layers - 1; i++) {
+		matrix_t *w = NULL, *b = NULL;
+		matrix_init(&w, *(int*)list_get(num_neurons, i + 1), *(int*)list_get(num_neurons, i), NULL);
+		matrix_init(&b, *(int*)list_get(num_neurons, i + 1), 1, NULL);
+		list_set(nn->weights, i, w);
+		list_set(nn->biases, i, b);
+		matrix_elementwise_func_3(w, gaussrand);
+		matrix_elementwise_func_3(b, gaussrand);
+	}
 
-	matrix_init(&wts1, num_neurons[1], num_neurons[0], NULL);
-	matrix_init(&wts2, num_neurons[2], num_neurons[1], NULL);
-	list_set(nn->weights, 0, wts1);
-	list_set(nn->weights, 1, wts2);
-
-	matrix_elementwise_func_3(wts1, gaussrand);
-	matrix_elementwise_func_3(wts2, gaussrand);
-
-	matrix_init(&bias1, num_neurons[1], 1, NULL);
-	matrix_init(&bias2, num_neurons[2], 1, NULL);
-	list_set(nn->biases, 0, bias1);
-	list_set(nn->biases, 1, bias2);
-
-	matrix_elementwise_func_3(bias1, gaussrand);
-	matrix_elementwise_func_3(bias2, gaussrand);
-
-	mllog(LOG_LEVEL_HIGH, 1, "NN_init wts1 (%s)(%lu)(%lu)\n", wts1?"GGG":"BBB", matrix_num_rows(wts1), matrix_num_cols(wts1));
-//	nn_matrix_print(LOG_LEVEL_HIGH, wts1, 13, 0);
-	mllog(LOG_LEVEL_HIGH, 1, "NN_init wts2 (%s)(%lu)(%lu)\n", wts2?"GGG":"BBB", matrix_num_rows(wts2), matrix_num_cols(wts2));
-//	nn_matrix_print(LOG_LEVEL_HIGH, wts2, 13, 0);
-	mllog(LOG_LEVEL_HIGH, 1, "NN_init bias1 (%s)(%lu)(%lu)\n", bias1?"GGG":"BBB", matrix_num_rows(bias1), matrix_num_cols(bias1));
-//	nn_matrix_print(LOG_LEVEL_HIGH, bias1, 13, 0);
-	mllog(LOG_LEVEL_HIGH, 1, "NN_init bias2 (%s)(%lu)(%lu)\n", bias2?"GGG":"BBB", matrix_num_rows(bias2), matrix_num_cols(bias2));
-//	nn_matrix_print(LOG_LEVEL_HIGH, bias2, 13, 0);
-
-	matrix_print_to_file(wts1, 15, 0, "wts1.txt");
-	matrix_print_to_file(wts2, 15, 0, "wts2.txt");
-	matrix_print_to_file(bias1, 15, 0, "bia1.txt");
-	matrix_print_to_file(bias2, 15, 0, "bia2.txt");
+//	mllog(LOG_LEVEL_HIGH, 1, "NN_init wts1 (%s)(%lu)(%lu)\n", wts1?"GGG":"BBB", matrix_num_rows(wts1), matrix_num_cols(wts1));
+////	nn_matrix_print(LOG_LEVEL_HIGH, wts1, 13, 0);
+//	mllog(LOG_LEVEL_HIGH, 1, "NN_init wts2 (%s)(%lu)(%lu)\n", wts2?"GGG":"BBB", matrix_num_rows(wts2), matrix_num_cols(wts2));
+////	nn_matrix_print(LOG_LEVEL_HIGH, wts2, 13, 0);
+//	mllog(LOG_LEVEL_HIGH, 1, "NN_init bias1 (%s)(%lu)(%lu)\n", bias1?"GGG":"BBB", matrix_num_rows(bias1), matrix_num_cols(bias1));
+////	nn_matrix_print(LOG_LEVEL_HIGH, bias1, 13, 0);
+//	mllog(LOG_LEVEL_HIGH, 1, "NN_init bias2 (%s)(%lu)(%lu)\n", bias2?"GGG":"BBB", matrix_num_rows(bias2), matrix_num_cols(bias2));
+////	nn_matrix_print(LOG_LEVEL_HIGH, bias2, 13, 0);
+//
+//	matrix_print_to_file(wts1, 15, 0, "wts1.txt");
+//	matrix_print_to_file(wts2, 15, 0, "wts2.txt");
+//	matrix_print_to_file(bias1, 15, 0, "bia1.txt");
+//	matrix_print_to_file(bias2, 15, 0, "bia2.txt");
 
 }
 
@@ -96,13 +88,16 @@ void feedforward(neural_network_t *nn, matrix_t *a, matrix_t **output) {
 }
 
 void sgd(neural_network_t *nn, size_t epochs, size_t mini_batch_size, double eta) {
-	if (!nn || !nn->training_data) return;
+	if (!nn || !nn->training_data) {
+		printf("sgd ERROR: nn(%s) training_data(%s)\n", nn?"GGG":"BBB", nn->training_data?"GGG":"BBB");
+		exit(1);
+	}
 
 	if (mini_batch_size > list_len(nn->training_data)) {
 		mllog(LOG_LEVEL_HIGH, 1, "Invalid mini batch size (%lu). Please choose a size less "
 			"than the size of the training data (%lu).\n",
 			mini_batch_size, list_len(nn->training_data));
-		return;
+		exit(1);
 	}
 
 	for (size_t i = 0; i < epochs; i++) {
@@ -172,12 +167,18 @@ void update_mini_batch(neural_network_t *nn, size_t start, size_t end, double et
 		list_set(nn->biases, i, sb);
 	}
 
+//	matrix_print(list_get(nn->weights, 0), 3, 3);
+//	matrix_print(list_get(nn->biases, 0), 3, 3);
 //	list_free(nabla_b);
 //	list_free(nabla_w);
 }
 
 void cost_derivative(matrix_t *output_activations, matrix_t *y, matrix_t **deriv) {
-	if (!output_activations || !y) return;
+	if (!output_activations || !y) {
+		printf("cost_derivative: ERROR: output_activations (%s) y (%s)\n", output_activations?"GGG":"BBB", y?"GGG":"BBB");
+		exit(1);
+	}
+
 	matrix_t *m, *d;
 	m = matrix_product_scalar_ret(y, -1);
 	matrix_sum(output_activations, m, &d);
@@ -231,7 +232,7 @@ void backprop(neural_network_t *nn, matrix_t *x, matrix_t *y, list_t **nabla_b, 
 	matrix_free(act_tr);
 	list_set(nabla_ww, -1, wwlast);
 
-	for (long i = 2; i < NUMBER_OF_LAYERS; i++) {
+	for (long i = 2; i < nn->num_layers; i++) {
 		matrix_t *z = list_get(zs, -i);
 		matrix_t *sp = matrix_elementwise_func_4_ret(z, sigmoid_prime);
 		matrix_t *t = matrix_transpose(list_get(nn->weights, -i + 1));
@@ -293,7 +294,7 @@ void nn_matrix_print(LOG_LEVEL LL, matrix_t *m, int precision, int zero_precisio
 }
 
 int run_mnist() {
-	size_t epochs = 5;
+	size_t epochs = 3;
 	size_t mini_batch_size = 10;
 	double eta = 3.0;
 	size_t num_neurs_1 = 784;
@@ -327,9 +328,14 @@ int run_mnist() {
 	}
 
 	neural_network_t *w;
-	int sizes[] = {num_neurs_1, num_neurs_2, num_neurs_3};
+	list_t *sizes = NULL;
+	list_init(&sizes, 3, NULL, NULL);
+	list_set(sizes, 0, &num_neurs_1);
+	list_set(sizes, 1, &num_neurs_2);
+	list_set(sizes, 2, &num_neurs_3);
+//	int sizes[] = {num_neurs_1, num_neurs_2, num_neurs_3};
 	neural_net_init(&w, sizes);
-	for (int i = 0; i < 3; i++) mllog(LOG_LEVEL_HIGH, 1, "sz(%d)(%d)\n", i, w->num_neurons[i]);
+	for (int i = 0; i < 3; i++) mllog(LOG_LEVEL_HIGH, 1, "sz(%d)(%d)\n", i, *(int*)list_get(w->num_neurons, i));
 
 	list_t *tr_d = NULL, *tr_r = NULL, *vl_d = NULL, *vl_r = NULL, *te_d = NULL, *te_r = NULL;
 
@@ -402,6 +408,52 @@ int run_mnist() {
 	return 0;
 }
 
+int run_toy() {
+	size_t epochs = 300;
+	size_t mini_batch_size = 1;
+	double eta = 0.15;
+	size_t num_neurs_1 = 1;
+	size_t num_neurs_2 = 1;
+	mllog(LOG_LEVEL_HIGH, 1, "run_toy epochs(%lu)mbs(%lu)eta(%.1f)(%lu)(%lu)\n", epochs, mini_batch_size, eta, num_neurs_1, num_neurs_2);
+
+	neural_network_t *nn;
+	list_t *sizes = NULL;
+	list_init(&sizes, 2, NULL, NULL);
+	list_set(sizes, 0, &num_neurs_1);
+	list_set(sizes, 1, &num_neurs_2);
+	neural_net_init(&nn, sizes);
+
+	list_t *tr_d, *tr_r, *te_d, *te_r;
+	list_init(&tr_d, 1, NULL, (free_fp)matrix_free);
+	list_init(&tr_r, 1, NULL, (free_fp)matrix_free);
+	list_init(&te_d, 1, NULL, (free_fp)matrix_free);
+	list_init(&te_r, 1, NULL, (free_fp)matrix_free);
+
+	matrix_t *trdm = NULL, *trrm = NULL, *tedm = NULL, *term = NULL;
+	matrix_init(&trdm, 1, 1, NULL);
+	matrix_init(&trrm, 1, 1, NULL);
+	matrix_init(&tedm, 1, 1, NULL);
+	matrix_init(&term, 1, 1, NULL);
+
+	matrix_set(trdm, 0, 0, 1);
+	matrix_set(trrm, 0, 0, 0);
+	matrix_set(tedm, 0, 0, 1);
+	matrix_set(term, 0, 0, 0);
+
+	list_set(tr_d, 0, trdm);
+	list_set(tr_r, 0, trrm);
+	list_set(te_d, 0, tedm);
+	list_set(te_r, 0, term);
+
+	nn->training_data = zip(tr_d, tr_r);
+	nn->test_data = zip(te_d, te_r);
+
+	sgd(nn, epochs, mini_batch_size, eta);
+	neural_network_free(nn);
+
+	return 0;
+}
+
 int run_dummy() {
 	size_t epochs = 3;
 	size_t mini_batch_size = 10;
@@ -415,7 +467,12 @@ int run_dummy() {
 	size_t num_ttd = 100;
 
 	neural_network_t *nn;
-	int sizes[] = {num_neurs_1, num_neurs_2, num_neurs_3};
+	list_t *sizes = NULL;
+	list_init(&sizes, 3, NULL, NULL);
+	list_set(sizes, 0, &num_neurs_1);
+	list_set(sizes, 1, &num_neurs_2);
+	list_set(sizes, 2, &num_neurs_3);
+//	int sizes[] = {num_neurs_1, num_neurs_2, num_neurs_3};
 	neural_net_init(&nn, sizes);
 	list_t *tr_d, *tr_r, *vl_d, *vl_r, *te_d, *te_r;
 	list_init(&tr_d, num_trd, NULL, (free_fp)matrix_free);
@@ -491,4 +548,5 @@ int main(int argc, char **argv) {
 	double zsp = sigmoid_prime(z);
 	mllog(LOG_LEVEL_DEBUG, 1, "z(%.12f) activatttttion(%.12f) zsp(%.12f)\n", z, act, zsp);
 //	run_dummy();
+//	run_toy();
 }
